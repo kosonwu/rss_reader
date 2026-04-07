@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__neon__describe_table_schema",
+      "mcp__neon__run_sql_transaction"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "neon"
+  ]
+}
