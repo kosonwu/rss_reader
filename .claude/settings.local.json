@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "mcp__neon__describe_table_schema",
-      "mcp__neon__run_sql_transaction"
+      "mcp__neon__run_sql_transaction",
+      "Bash(npx shadcn@latest add input label checkbox --yes)",
+      "Bash(npx shadcn@latest add alert-dialog dialog sonner --yes)",
+      "Bash(npm run:*)"
     ]
   },
   "enabledMcpjsonServers": [

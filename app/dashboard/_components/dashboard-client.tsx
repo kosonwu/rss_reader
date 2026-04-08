@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { format, startOfMonth, endOfDay, isWithinInterval, parseISO } from "date-fns"
 import {
   CalendarIcon,
@@ -9,6 +10,7 @@ import {
   ExternalLinkIcon,
   FilterIcon,
   NewspaperIcon,
+  SettingsIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -189,12 +191,31 @@ export default function DashboardClient({
             </p>
           </div>
 
-          <div className="text-right shrink-0">
-            <div className="text-[2.8rem] font-mono font-light text-amber-400 leading-none tabular-nums">
-              {filtered.length}
-            </div>
-            <div className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-mono">
-              {filtered.length === 1 ? "article" : "articles"}
+          <div className="flex items-end gap-6 shrink-0">
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
+              <Link href="/dashboard/keywords">
+                <div className="flex items-center gap-1.5">
+                  <TagIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Keywords</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  {keywords.length}
+                </div>
+              </Link>
+            </Button>
+
+            <div className="text-right">
+              <div className="text-[2.8rem] font-mono font-light text-amber-400 leading-none tabular-nums">
+                {filtered.length}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-mono">
+                {filtered.length === 1 ? "article" : "articles"}
+              </div>
             </div>
           </div>
         </div>
