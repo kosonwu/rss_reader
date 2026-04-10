@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { feedItems, feeds, userSubscriptions } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 
 export async function getUserFeedItems(userId: string) {
   return db
@@ -16,6 +16,16 @@ export async function getUserFeedItems(userId: string) {
     .from(feedItems)
     .innerJoin(feeds, eq(feeds.id, feedItems.feedId))
     .innerJoin(userSubscriptions, eq(userSubscriptions.feedId, feeds.id))
-    .where(eq(userSubscriptions.userId, userId))
+    .where(and(eq(userSubscriptions.userId, userId), eq(userSubscriptions.isActive, true)))
     .orderBy(desc(feedItems.publishedAt));
+}
+
+export async function getUserFeedItemsCount(userId: string): Promise<number> {
+  const result = await db
+    .select({ count: count() })
+    .from(feedItems)
+    .innerJoin(feeds, eq(feeds.id, feedItems.feedId))
+    .innerJoin(userSubscriptions, eq(userSubscriptions.feedId, feeds.id))
+    .where(and(eq(userSubscriptions.userId, userId), eq(userSubscriptions.isActive, true)));
+  return result[0]?.count ?? 0;
 }

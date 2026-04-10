@@ -3,14 +3,42 @@
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { deleteKeyword, updateKeyword } from "@/data/keywords";
+import { createKeyword, deleteKeyword, updateKeyword } from "@/data/keywords";
+
+const CreateKeywordSchema = z.object({
+  keyword: z.string().min(1, "Keyword is required").max(100),
+  isCaseSensitive: z.boolean(),
+});
+
+export async function createKeywordAction(params: {
+  keyword: string;
+  isCaseSensitive: boolean;
+}) {
+  const { userId } = await auth();
+  if (!userId) return { error: "Unauthorized" };
+
+  const parsed = CreateKeywordSchema.safeParse(params);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const { keyword, isCaseSensitive } = parsed.data;
+
+  try {
+    await createKeyword(userId, keyword, isCaseSensitive);
+  } catch {
+    return { error: "Keyword already exists" };
+  }
+
+  revalidatePath("/dashboard/keywords");
+}
+
+const uuidFormat = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
 
 const DeleteKeywordSchema = z.object({
-  keywordId: z.string().uuid(),
+  keywordId: z.string().regex(uuidFormat, "Invalid UUID"),
 });
 
 const UpdateKeywordSchema = z.object({
-  keywordId: z.string().uuid(),
+  keywordId: z.string().regex(uuidFormat, "Invalid UUID"),
   keyword: z.string().min(1).max(100),
   isCaseSensitive: z.boolean(),
 });
@@ -35,7 +63,7 @@ export async function updateKeywordAction(params: {
   if (!userId) return { error: "Unauthorized" };
 
   const parsed = UpdateKeywordSchema.safeParse(params);
-  if (!parsed.success) return { error: parsed.error.errors[0].message };
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { keywordId, keyword, isCaseSensitive } = parsed.data;
 

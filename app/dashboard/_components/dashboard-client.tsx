@@ -1,9 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { format, startOfMonth, endOfDay, isWithinInterval, parseISO } from "date-fns"
+import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns"
 import {
+  ActivityIcon,
+  BookmarkIcon,
   CalendarIcon,
   RssIcon,
   TagIcon,
@@ -11,6 +14,7 @@ import {
   FilterIcon,
   NewspaperIcon,
   SettingsIcon,
+  HeartPulseIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -132,17 +136,47 @@ function DatePicker({
 
 export default function DashboardClient({
   feeds,
+  feedsCount,
   feedItems,
   keywords,
+  subscriptionsCount,
 }: {
   feeds: Feed[]
+  feedsCount: number
   feedItems: FeedItem[]
   keywords: Keyword[]
+  subscriptionsCount: number
 }) {
+  const router = useRouter()
+  const knownCount = useRef(feedItems.length)
+
+  // Keep knownCount in sync after router.refresh() delivers new props
+  useEffect(() => {
+    knownCount.current = feedItems.length
+  }, [feedItems.length])
+
+  useEffect(() => {
+    const POLL_INTERVAL = 60_000 // 60 seconds
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/feed-items-count")
+        if (!res.ok) return
+        const { count } = await res.json()
+        if (count > knownCount.current) {
+          knownCount.current = count
+          router.refresh()
+        }
+      } catch {
+        // network error — silently skip
+      }
+    }, POLL_INTERVAL)
+    return () => clearInterval(id)
+  }, [router])
+
   const today = new Date()
   const firstOfMonth = startOfMonth(today)
 
-  const [dateFrom, setDateFrom] = useState<Date>(firstOfMonth)
+  const [dateFrom, setDateFrom] = useState<Date>(today)
   const [dateTo, setDateTo] = useState<Date>(today)
   const [selectedFeed, setSelectedFeed] = useState<string>("all")
   const [selectedKeyword, setSelectedKeyword] = useState<string>("all")
@@ -160,7 +194,7 @@ export default function DashboardClient({
   const filtered = feedItems.filter((item) => {
     const pub = item.publishedAt ? parseISO(item.publishedAt) : null
     const inRange = pub
-      ? isWithinInterval(pub, { start: dateFrom, end: endOfDay(dateTo) })
+      ? isWithinInterval(pub, { start: startOfDay(dateFrom), end: endOfDay(dateTo) })
       : false
     const matchFeed = selectedFeed === "all" || item.feedId === selectedFeed
     const matchKeyword =
@@ -197,6 +231,40 @@ export default function DashboardClient({
               variant="ghost"
               className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
             >
+              <Link href="/dashboard/feeds">
+                <div className="flex items-center gap-1.5">
+                  <RssIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Feeds</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  {feedsCount}
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
+              <Link href="/dashboard/subscriptions">
+                <div className="flex items-center gap-1.5">
+                  <BookmarkIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Subscriptions</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  {subscriptionsCount}
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
               <Link href="/dashboard/keywords">
                 <div className="flex items-center gap-1.5">
                   <TagIcon className="size-3 text-amber-400" />
@@ -205,6 +273,38 @@ export default function DashboardClient({
                 </div>
                 <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
                   {keywords.length}
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
+              <Link href="/dashboard/fetch">
+                <div className="flex items-center gap-1.5">
+                  <ActivityIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Fetch Logs</span>
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  ↗
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
+              <Link href="/dashboard/health">
+                <div className="flex items-center gap-1.5">
+                  <HeartPulseIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">AP Health</span>
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  ↗
                 </div>
               </Link>
             </Button>
@@ -241,7 +341,7 @@ export default function DashboardClient({
               <SelectItem value="all" className="font-mono text-xs">
                 All Feeds
               </SelectItem>
-              {feeds.map((f) => (
+              {[...feeds].sort((a, b) => (a.title ?? a.url).localeCompare(b.title ?? b.url)).map((f) => (
                 <SelectItem key={f.id} value={f.id} className="font-mono text-xs">
                   {f.title ?? f.url}
                 </SelectItem>
@@ -259,7 +359,7 @@ export default function DashboardClient({
               <SelectItem value="all" className="font-mono text-xs">
                 All Keywords
               </SelectItem>
-              {keywords.map((kw) => (
+              {[...keywords].sort((a, b) => a.keyword.localeCompare(b.keyword)).map((kw) => (
                 <SelectItem key={kw.id} value={kw.keyword} className="font-mono text-xs">
                   {kw.keyword}
                 </SelectItem>

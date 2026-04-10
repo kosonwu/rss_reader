@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { keywords } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 export async function createKeyword(
   userId: string,
@@ -19,9 +19,11 @@ export async function getUserKeywords(userId: string) {
       id: keywords.id,
       keyword: keywords.keyword,
       isCaseSensitive: keywords.isCaseSensitive,
+      createdAt: keywords.createdAt,
     })
     .from(keywords)
-    .where(eq(keywords.userId, userId));
+    .where(eq(keywords.userId, userId))
+    .orderBy(asc(keywords.keyword));
 }
 
 export async function deleteKeyword(userId: string, keywordId: string) {

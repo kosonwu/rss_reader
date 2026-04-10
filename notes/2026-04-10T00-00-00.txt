@@ -1,0 +1,28 @@
+Date: 2026-04-10
+
+## What was changed
+
+**`app/api/status/route.ts`** and **`app/api/health/route.ts`**
+- Replaced hardcoded `localhost` port loop with `FETCHER_URL` env var
+- Falls back to `http://localhost:8000` for local dev
+
+**`app/fetcher/Procfile`** (new file)
+- Tells Railway how to start the Python fetcher service
+- Content: `web: uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+---
+
+## Next steps to deploy
+
+### Railway (Fetcher):
+1. Connect your repo, set root directory to `app/fetcher`
+2. Set env vars: `DATABASE_URL`, `FETCH_COORDINATOR_INTERVAL` (optional)
+3. Copy the deployed URL (e.g. `https://rss-fetcher.railway.app`)
+
+### Vercel (Next.js):
+1. Connect your repo
+2. Set env vars:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+   - `CLERK_SECRET_KEY`
+   - `DATABASE_URL`
+   - `FETCHER_URL=https://rss-fetcher.railway.app`  ← the Railway URL from above

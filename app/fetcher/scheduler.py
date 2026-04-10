@@ -1,0 +1,92 @@
+"""
+APScheduler coordinator.
+Runs a single job on a fixed interval; checks which feeds are due and
+spawns asyncio tasks for each — avoids per-feed job management.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+import database
+from config import settings
+from feed_fetcher import fetch_feed
+
+logger = logging.getLogger(__name__)
+
+_scheduler: AsyncIOScheduler | None = None
+
+# Track in-flight fetch tasks so we don't double-fetch the same feed
+_in_flight: set[str] = set()
+
+
+async def _coordinator() -> None:
+    """Check for due feeds and launch fetch tasks."""
+    try:
+        due_feeds = await database.get_due_feeds()
+    except Exception as exc:
+        logger.error("coordinator: failed to query due feeds: %s", exc)
+        return
+
+    if not due_feeds:
+        logger.debug("coordinator: no feeds due")
+        return
+
+    logger.info("coordinator: %d feed(s) due", len(due_feeds))
+
+    for row in due_feeds:
+        feed_id = str(row["id"])
+        if feed_id in _in_flight:
+            logger.debug("coordinator: feed=%s already in flight, skipping", feed_id)
+            continue
+
+        _in_flight.add(feed_id)
+        asyncio.create_task(_run_and_release(feed_id, str(row["url"])))
+
+
+async def _run_and_release(feed_id: str, feed_url: str) -> None:
+    try:
+        await fetch_feed(feed_id, feed_url)
+    finally:
+        _in_flight.discard(feed_id)
+
+
+def start_scheduler() -> None:
+    global _scheduler
+    _scheduler = AsyncIOScheduler()
+    _scheduler.add_job(
+        _coordinator,
+        trigger="interval",
+        seconds=settings.fetch_coordinator_interval,
+        id="coordinator",
+        max_instances=1,
+        coalesce=True,
+    )
+    _scheduler.start()
+    logger.info("scheduler started (interval=%ds)", settings.fetch_coordinator_interval)
+
+
+def stop_scheduler() -> None:
+    global _scheduler
+    if _scheduler and _scheduler.running:
+        _scheduler.shutdown(wait=False)
+        logger.info("scheduler stopped")
+
+
+def get_scheduler_state() -> dict:
+    if _scheduler is None:
+        return {"running": False}
+    return {
+        "running": _scheduler.running,
+        "in_flight_feeds": list(_in_flight),
+        "jobs": [
+            {
+                "id": job.id,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+            }
+            for job in _scheduler.get_jobs()
+        ],
+    }
