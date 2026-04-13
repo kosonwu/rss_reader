@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { format, parseISO, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import {
-  ActivityIcon,
+  BrainCircuitIcon,
   ArrowLeftIcon,
   CalendarIcon,
   CheckCircle2Icon,
@@ -12,7 +12,7 @@ import {
   MinusCircleIcon,
   ClockIcon,
   FilterIcon,
-  RssIcon,
+  CpuIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardNav from "@/app/dashboard/_components/dashboard-nav";
@@ -43,21 +43,22 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-type FetchLog = {
+type EmbeddingLog = {
   id: string;
-  feedId: string;
-  feedTitle: string | null;
-  feedUrl: string;
   status: "success" | "failed" | "skipped";
-  articleCount: number;
+  itemsFetched: number;
+  itemsEmbedded: number;
+  itemsSkipped: number;
+  itemsRemainingAfter: number | null;
   durationMs: number | null;
+  modelName: string | null;
   errorMessage: string | null;
   runAt: string;
 };
 
 // ── Status badge ───────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: FetchLog["status"] }) {
+function StatusBadge({ status }: { status: EmbeddingLog["status"] }) {
   if (status === "success") {
     return (
       <Badge className="gap-1 text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded">
@@ -133,41 +134,33 @@ const PAGE_SIZE = 20;
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function FetchLogsClient({
+export default function FetchEmbeddingLogsClient({
   logs,
   feedsCount,
   subscriptionsCount,
   keywordsCount,
   bookmarksCount,
 }: {
-  logs: FetchLog[];
+  logs: EmbeddingLog[];
   feedsCount: number;
   subscriptionsCount: number;
   keywordsCount: number;
   bookmarksCount: number;
 }) {
   const today = new Date();
-  const firstOfMonth = startOfMonth(today);
 
   const [dateFrom, setDateFrom] = useState<Date>(today);
   const [dateTo, setDateTo] = useState<Date>(today);
-  const [feedFilter, setFeedFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
 
   function handleDateFrom(d: Date) { setDateFrom(d); setPage(1); }
   function handleDateTo(d: Date) { setDateTo(d); setPage(1); }
-  function handleFeedFilter(v: string) { setFeedFilter(v); setPage(1); }
   function handleStatusFilter(v: string) { setStatusFilter(v); setPage(1); }
-
-  const uniqueFeeds = Array.from(
-    new Map(logs.map((l) => [l.feedId, { id: l.feedId, title: l.feedTitle ?? l.feedUrl }])).values()
-  ).sort((a, b) => a.title.localeCompare(b.title));
 
   const filtered = logs.filter((log) => {
     const runAt = parseISO(log.runAt);
     if (!isWithinInterval(runAt, { start: startOfDay(dateFrom), end: endOfDay(dateTo) })) return false;
-    if (feedFilter !== "all" && log.feedId !== feedFilter) return false;
     if (statusFilter !== "all" && log.status !== statusFilter) return false;
     return true;
   });
@@ -177,6 +170,7 @@ export default function FetchLogsClient({
 
   const successCount = filtered.filter((l) => l.status === "success").length;
   const failedCount = filtered.filter((l) => l.status === "failed").length;
+  const totalEmbedded = filtered.reduce((sum, l) => sum + l.itemsEmbedded, 0);
 
   return (
     <div className="dark min-h-screen bg-[oklch(0.09_0_0)] text-foreground">
@@ -185,7 +179,7 @@ export default function FetchLogsClient({
         <div className="max-w-7xl mx-auto flex items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <ActivityIcon className="size-4 text-amber-400" />
+              <BrainCircuitIcon className="size-4 text-amber-400" />
               <span className="text-[10px] font-mono text-amber-400 tracking-[0.25em] uppercase">
                 RSS Reader
               </span>
@@ -202,7 +196,7 @@ export default function FetchLogsClient({
               </Button>
             </div>
             <h1 className="text-[2.2rem] font-[family-name:var(--font-playfair)] font-bold tracking-tight leading-none">
-              Fetch Logs
+              Embedding Logs
             </h1>
             <p className="text-xs font-mono text-muted-foreground mt-2 tracking-wide">
               {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
@@ -216,7 +210,7 @@ export default function FetchLogsClient({
               subscriptionsCount={subscriptionsCount}
               keywordsCount={keywordsCount}
               bookmarksCount={bookmarksCount}
-              activePage="fetch"
+              activePage="fetch_embedding"
             />
             <div className="text-right">
               <div className="text-[16px] font-mono font-light text-emerald-400 leading-none tabular-nums">
@@ -234,6 +228,14 @@ export default function FetchLogsClient({
                 failed
               </div>
             </div>
+            <div className="text-right">
+              <div className="text-[16px] font-mono font-light text-sky-400 leading-none tabular-nums">
+                {totalEmbedded}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-mono">
+                embedded
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -244,19 +246,6 @@ export default function FetchLogsClient({
           <FilterIcon className="size-3.5 text-muted-foreground shrink-0 mr-0.5" />
           <DatePicker date={dateFrom} onSelect={handleDateFrom} label="From" />
           <DatePicker date={dateTo} onSelect={handleDateTo} label="To" />
-          <Select value={feedFilter} onValueChange={handleFeedFilter}>
-            <SelectTrigger className="h-9 min-w-[180px] font-mono text-xs border-white/15 bg-white/5 hover:bg-white/10 focus:ring-0 focus:ring-offset-0">
-              <SelectValue placeholder="All feeds" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-mono text-xs">All feeds</SelectItem>
-              {uniqueFeeds.map((feed) => (
-                <SelectItem key={feed.id} value={feed.id} className="font-mono text-xs">
-                  {feed.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={statusFilter} onValueChange={handleStatusFilter}>
             <SelectTrigger className="h-9 min-w-[140px] font-mono text-xs border-white/15 bg-white/5 hover:bg-white/10 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All statuses" />
@@ -265,6 +254,7 @@ export default function FetchLogsClient({
               <SelectItem value="all" className="font-mono text-xs">All statuses</SelectItem>
               <SelectItem value="success" className="font-mono text-xs">Success</SelectItem>
               <SelectItem value="failed" className="font-mono text-xs">Failed</SelectItem>
+              <SelectItem value="skipped" className="font-mono text-xs">Skipped</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -274,95 +264,129 @@ export default function FetchLogsClient({
       <div className="max-w-7xl mx-auto px-6 py-8 lg:px-10">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-muted-foreground gap-4">
-            <ActivityIcon className="size-14 opacity-10" />
-            <p className="font-mono text-sm">No fetch logs in this date range.</p>
+            <BrainCircuitIcon className="size-14 opacity-10" />
+            <p className="font-mono text-sm">No embedding logs in this date range.</p>
           </div>
         ) : (
           <>
-          <div className="rounded-xl border border-white/8 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-white/8 hover:bg-transparent">
-                  <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[220px]">
-                    Feed
-                  </TableHead>
-                  <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[110px]">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[100px] text-right">
-                    Articles
-                  </TableHead>
-                  <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[100px] text-right">
-                    Duration
-                  </TableHead>
-                  <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
-                    Error
-                  </TableHead>
-                  <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[150px] text-right">
-                    Run at
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pagedLogs.map((log) => (
-                  <TableRow
-                    key={log.id}
-                    className="border-white/8 hover:bg-white/4 transition-colors duration-150"
-                  >
-                    {/* Feed name */}
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <RssIcon className="size-3 text-amber-400 shrink-0" />
-                        <span className="font-mono text-xs text-foreground truncate">
-                          {log.feedTitle ?? log.feedUrl}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    {/* Status */}
-                    <TableCell className="py-3">
-                      <StatusBadge status={log.status} />
-                    </TableCell>
-
-                    {/* Article count */}
-                    <TableCell className="py-3 text-right">
-                      <span className="font-mono text-xs tabular-nums text-foreground">
-                        {log.articleCount}
-                      </span>
-                    </TableCell>
-
-                    {/* Duration */}
-                    <TableCell className="py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <ClockIcon className="size-3 text-muted-foreground shrink-0" />
-                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                          {formatDuration(log.durationMs)}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    {/* Error message */}
-                    <TableCell className="py-3 max-w-[260px]">
-                      {log.errorMessage ? (
-                        <span className="font-mono text-[11px] text-red-400 truncate block">
-                          {log.errorMessage}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Run at */}
-                    <TableCell className="py-3 text-right">
-                      <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                        {format(parseISO(log.runAt), "do MMM yyyy, HH:mm")}
-                      </span>
-                    </TableCell>
+            <div className="rounded-xl border border-white/8 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/8 hover:bg-transparent">
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[110px]">
+                      Status
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[90px] text-right">
+                      Fetched
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[90px] text-right">
+                      Embedded
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[90px] text-right">
+                      Skipped
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[100px] text-right">
+                      Remaining
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[100px] text-right">
+                      Duration
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
+                      Model
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground">
+                      Error
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[150px] text-right">
+                      Run at
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {pagedLogs.map((log) => (
+                    <TableRow
+                      key={log.id}
+                      className="border-white/8 hover:bg-white/4 transition-colors duration-150"
+                    >
+                      {/* Status */}
+                      <TableCell className="py-3">
+                        <StatusBadge status={log.status} />
+                      </TableCell>
+
+                      {/* Items fetched */}
+                      <TableCell className="py-3 text-right">
+                        <span className="font-mono text-xs tabular-nums text-foreground">
+                          {log.itemsFetched}
+                        </span>
+                      </TableCell>
+
+                      {/* Items embedded */}
+                      <TableCell className="py-3 text-right">
+                        <span className="font-mono text-xs tabular-nums text-sky-400">
+                          {log.itemsEmbedded}
+                        </span>
+                      </TableCell>
+
+                      {/* Items skipped */}
+                      <TableCell className="py-3 text-right">
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {log.itemsSkipped}
+                        </span>
+                      </TableCell>
+
+                      {/* Items remaining after */}
+                      <TableCell className="py-3 text-right">
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {log.itemsRemainingAfter ?? "—"}
+                        </span>
+                      </TableCell>
+
+                      {/* Duration */}
+                      <TableCell className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <ClockIcon className="size-3 text-muted-foreground shrink-0" />
+                          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                            {formatDuration(log.durationMs)}
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      {/* Model name */}
+                      <TableCell className="py-3 max-w-[180px]">
+                        {log.modelName ? (
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <CpuIcon className="size-3 text-amber-400 shrink-0" />
+                            <span className="font-mono text-[11px] text-muted-foreground truncate">
+                              {log.modelName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+
+                      {/* Error message */}
+                      <TableCell className="py-3 max-w-[220px]">
+                        {log.errorMessage ? (
+                          <span className="font-mono text-[11px] text-red-400 truncate block">
+                            {log.errorMessage}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+
+                      {/* Run at */}
+                      <TableCell className="py-3 text-right">
+                        <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                          {format(parseISO(log.runAt), "do MMM yyyy, HH:mm")}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
 
             {totalPages > 1 && (
               <div className="mt-4">

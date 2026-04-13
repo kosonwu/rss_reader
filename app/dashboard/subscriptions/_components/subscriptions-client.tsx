@@ -21,6 +21,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -53,6 +69,8 @@ import {
   updateSubscriptionAction,
 } from "../actions";
 
+const PAGE_SIZE = 10;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Subscription = {
@@ -71,15 +89,16 @@ type AvailableFeed = {
   id: string;
   title: string | null;
   url: string;
+  description: string | null;
 };
 
-// ── Shared field styles ────────────────────────────────────────────────────────
+// ── Shared field styles ───────────────────────────────────────────────────────
 
 const inputCls =
   "border-white/15 bg-white/5 focus-visible:ring-amber-500/50 text-foreground placeholder:text-muted-foreground/50";
 const labelCls = "text-sm text-foreground/80";
 
-// ── Add Dialog ─────────────────────────────────────────────────────────────────
+// ── Add Dialog ────────────────────────────────────────────────────────────────
 
 function AddDialog({
   open,
@@ -94,6 +113,15 @@ function AddDialog({
   const [displayName, setDisplayName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isPending, startTransition] = useTransition();
+
+  const selectedFeed = availableFeeds.find((f) => f.id === feedId) ?? null;
+
+  function handleFeedChange(id: string) {
+    setFeedId(id);
+    const feed = availableFeeds.find((f) => f.id === id);
+    const desc = feed?.description ?? "";
+    setDisplayName(desc.length > 30 ? desc.slice(0, 30) + "…" : desc);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,11 +163,8 @@ function AddDialog({
               <Label htmlFor="sub-feed" className={labelCls}>
                 Feed <span className="text-amber-400">*</span>
               </Label>
-              <Select value={feedId} onValueChange={setFeedId}>
-                <SelectTrigger
-                  id="sub-feed"
-                  className={`w-full ${inputCls}`}
-                >
+              <Select value={feedId} onValueChange={handleFeedChange}>
+                <SelectTrigger id="sub-feed" className={`w-full ${inputCls}`}>
                   <SelectValue placeholder="Select a feed…" />
                 </SelectTrigger>
                 <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
@@ -155,6 +180,13 @@ function AddDialog({
                 </SelectContent>
               </Select>
             </div>
+            {selectedFeed?.description && (
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {selectedFeed.description}
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="sub-display-name" className={labelCls}>
                 Display name
@@ -176,17 +208,11 @@ function AddDialog({
                 checked={isActive}
                 onCheckedChange={(checked) => setIsActive(checked === true)}
               />
-              <Label htmlFor="sub-active" className={labelCls}>
-                Active
-              </Label>
+              <Label htmlFor="sub-active" className={labelCls}>Active</Label>
             </div>
             <DialogFooter className="gap-2 pt-2">
               <DialogClose asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-white/15 bg-white/5 hover:bg-white/10"
-                >
+                <Button type="button" variant="outline" className="border-white/15 bg-white/5 hover:bg-white/10">
                   Cancel
                 </Button>
               </DialogClose>
@@ -205,7 +231,7 @@ function AddDialog({
   );
 }
 
-// ── Edit Dialog ────────────────────────────────────────────────────────────────
+// ── Edit Dialog ───────────────────────────────────────────────────────────────
 
 function EditDialog({
   subscription,
@@ -216,9 +242,7 @@ function EditDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [displayName, setDisplayName] = useState(
-    subscription.displayName ?? "",
-  );
+  const [displayName, setDisplayName] = useState(subscription.displayName ?? "");
   const [isActive, setIsActive] = useState(subscription.isActive);
   const [isPending, startTransition] = useTransition();
 
@@ -255,6 +279,13 @@ function EditDialog({
               {subscription.feedUrl}
             </p>
           </div>
+          {subscription.feedDescription && (
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {subscription.feedDescription}
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="edit-display-name" className={labelCls}>
               Display name
@@ -276,25 +307,15 @@ function EditDialog({
               checked={isActive}
               onCheckedChange={(checked) => setIsActive(checked === true)}
             />
-            <Label htmlFor="edit-active" className={labelCls}>
-              Active
-            </Label>
+            <Label htmlFor="edit-active" className={labelCls}>Active</Label>
           </div>
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/15 bg-white/5 hover:bg-white/10"
-              >
+              <Button type="button" variant="outline" className="border-white/15 bg-white/5 hover:bg-white/10">
                 Cancel
               </Button>
             </DialogClose>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="bg-amber-500 text-black hover:bg-amber-400"
-            >
+            <Button type="submit" disabled={isPending} className="bg-amber-500 text-black hover:bg-amber-400">
               {isPending ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
@@ -304,9 +325,9 @@ function EditDialog({
   );
 }
 
-// ── Subscription Row ───────────────────────────────────────────────────────────
+// ── Subscription Table Row ────────────────────────────────────────────────────
 
-function SubscriptionRow({ subscription }: { subscription: Subscription }) {
+function SubscriptionTableRow({ subscription }: { subscription: Subscription }) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -322,119 +343,106 @@ function SubscriptionRow({ subscription }: { subscription: Subscription }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg border border-white/8 bg-white/4 hover:border-white/15 hover:bg-white/6 transition-all duration-200">
-        <div className="flex items-center gap-3 min-w-0">
-          <RssIcon className="size-3.5 text-amber-400 shrink-0" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm text-foreground truncate">
+      <TableRow className="border-white/8 hover:bg-white/4 transition-colors duration-150">
+        <TableCell>
+          <div className="flex items-center gap-2 min-w-0">
+            <RssIcon className="size-3.5 text-amber-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="font-mono text-sm text-foreground truncate block">
                 {displayTitle}
               </span>
-              <Badge
-                className={`text-[9px] font-mono border px-1.5 py-0.5 rounded shrink-0 ${
-                  subscription.isActive
-                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
-                    : "bg-zinc-500/15 text-zinc-400 border-zinc-500/25"
-                }`}
-              >
-                {subscription.isActive ? "Active" : "Paused"}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-[11px] text-muted-foreground font-mono truncate">
+              <span className="font-mono text-[11px] text-muted-foreground truncate block">
                 {subscription.feedUrl}
               </span>
-              <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0">
-                subscribed {format(new Date(subscription.subscribedAt), "do MMM yyyy")}
-              </span>
             </div>
-            {subscription.feedDescription && (
-              <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">
-                {subscription.feedDescription}
-              </p>
-            )}
           </div>
-        </div>
+        </TableCell>
+        <TableCell>
+          <Badge
+            className={`text-[9px] font-mono border px-1.5 py-0.5 rounded ${
+              subscription.isActive
+                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+                : "bg-zinc-500/15 text-zinc-400 border-zinc-500/25"
+            }`}
+          >
+            {subscription.isActive ? "Active" : "Paused"}
+          </Badge>
+        </TableCell>
+        <TableCell className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+          {format(new Date(subscription.subscribedAt), "do MMM yyyy")}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-1">
+            {subscription.feedSiteUrl && (
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+              >
+                <a
+                  href={subscription.feedSiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Visit site"
+                >
+                  <ExternalLinkIcon className="size-3.5" />
+                </a>
+              </Button>
+            )}
 
-        <div className="flex items-center gap-1 shrink-0">
-          {subscription.feedSiteUrl && (
             <Button
-              asChild
               variant="ghost"
               size="icon"
               className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+              onClick={() => setEditOpen(true)}
+              aria-label={`Edit ${displayTitle}`}
             >
-              <a
-                href={subscription.feedSiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Visit site"
-              >
-                <ExternalLinkIcon className="size-3.5" />
-              </a>
+              <PencilIcon className="size-3.5" />
             </Button>
-          )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
-            onClick={() => setEditOpen(true)}
-            aria-label={`Edit ${displayTitle}`}
-          >
-            <PencilIcon className="size-3.5" />
-          </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
-                disabled={isPending}
-                aria-label={`Unsubscribe from ${displayTitle}`}
-              >
-                <Trash2Icon className="size-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
-                  Unsubscribe?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground">
-                  <span className="font-mono text-amber-400">
-                    &ldquo;{displayTitle}&rdquo;
-                  </span>{" "}
-                  will be removed from your subscriptions.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleUnsubscribe}
-                  className="bg-red-600 text-white hover:bg-red-500"
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                  disabled={isPending}
+                  aria-label={`Unsubscribe from ${displayTitle}`}
                 >
-                  Unsubscribe
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+                  <Trash2Icon className="size-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
+                    Unsubscribe?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground">
+                    <span className="font-mono text-amber-400">&ldquo;{displayTitle}&rdquo;</span>{" "}
+                    will be removed from your subscriptions.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={handleUnsubscribe} className="bg-red-600 text-white hover:bg-red-500">
+                    Unsubscribe
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </TableCell>
+      </TableRow>
 
-      <EditDialog
-        subscription={subscription}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      <EditDialog subscription={subscription} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 type ActiveFilter = "all" | "active" | "paused";
 
@@ -444,16 +452,19 @@ export default function SubscriptionsClient({
   feedsCount,
   subscriptionsCount,
   keywordsCount,
+  bookmarksCount,
 }: {
   subscriptions: Subscription[];
   availableFeeds: AvailableFeed[];
   feedsCount: number;
   subscriptionsCount: number;
   keywordsCount: number;
+  bookmarksCount: number;
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [page, setPage] = useState(1);
 
   const filteredSubscriptions = subscriptions.filter((s) => {
     const haystack = (s.displayName ?? s.feedTitle ?? s.feedUrl).toLowerCase();
@@ -465,7 +476,19 @@ export default function SubscriptionsClient({
     return matchesName && matchesActive;
   });
 
+  const totalPages = Math.ceil(filteredSubscriptions.length / PAGE_SIZE);
+  const pagedSubscriptions = filteredSubscriptions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const isFiltered = nameFilter !== "" || activeFilter !== "all";
+
+  function handleNameFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setNameFilter(e.target.value);
+    setPage(1);
+  }
+
+  function handleActiveFilterChange(v: string) {
+    setActiveFilter(v as ActiveFilter);
+    setPage(1);
+  }
 
   return (
     <div className="dark min-h-screen bg-[oklch(0.09_0_0)] text-foreground">
@@ -504,6 +527,7 @@ export default function SubscriptionsClient({
               feedsCount={feedsCount}
               subscriptionsCount={subscriptionsCount}
               keywordsCount={keywordsCount}
+              bookmarksCount={bookmarksCount}
               activePage="subscriptions"
             />
             <Button
@@ -520,20 +544,17 @@ export default function SubscriptionsClient({
       {/* Filters */}
       {subscriptions.length > 0 && (
         <div className="border-b border-white/8 px-6 py-3 lg:px-10">
-          <div className="max-w-2xl mx-auto flex items-center gap-2">
+          <div className="max-w-4xl mx-auto flex items-center gap-2">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
               <Input
                 value={nameFilter}
-                onChange={(e) => setNameFilter(e.target.value)}
+                onChange={handleNameFilterChange}
                 placeholder="Filter by display name…"
                 className={`pl-8 h-8 text-xs font-mono ${inputCls}`}
               />
             </div>
-            <Select
-              value={activeFilter}
-              onValueChange={(v) => setActiveFilter(v as ActiveFilter)}
-            >
+            <Select value={activeFilter} onValueChange={handleActiveFilterChange}>
               <SelectTrigger className={`w-36 h-8 text-xs font-mono ${inputCls}`}>
                 <SelectValue />
               </SelectTrigger>
@@ -553,8 +574,8 @@ export default function SubscriptionsClient({
         </div>
       )}
 
-      {/* List */}
-      <div className="max-w-2xl mx-auto px-6 py-8 lg:px-10">
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-6 py-8 lg:px-10">
         {subscriptions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-muted-foreground gap-4">
             <BookmarkIcon className="size-14 opacity-10" />
@@ -581,20 +602,71 @@ export default function SubscriptionsClient({
                 {subscriptions.length === 1 ? "subscription" : "subscriptions"}
               </p>
             )}
-            <div className="flex flex-col gap-2">
-              {filteredSubscriptions.map((s) => (
-                <SubscriptionRow key={s.id} subscription={s} />
-              ))}
+
+            <div className="rounded-lg border border-white/8 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/8 hover:bg-transparent">
+                    <TableHead className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Feed
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Status
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase whitespace-nowrap">
+                      Subscribed
+                    </TableHead>
+                    <TableHead className="w-[100px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagedSubscriptions.map((s) => (
+                    <SubscriptionTableRow key={s.id} subscription={s} />
+                  ))}
+                </TableBody>
+              </Table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }}
+                        aria-disabled={page === 1}
+                        className={page === 1 ? "pointer-events-none opacity-40" : ""}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setPage(p); }}
+                          isActive={p === page}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }}
+                        aria-disabled={page === totalPages}
+                        className={page === totalPages ? "pointer-events-none opacity-40" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </>
         )}
       </div>
 
-      <AddDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        availableFeeds={availableFeeds}
-      />
+      <AddDialog open={addOpen} onOpenChange={setAddOpen} availableFeeds={availableFeeds} />
     </div>
   );
 }

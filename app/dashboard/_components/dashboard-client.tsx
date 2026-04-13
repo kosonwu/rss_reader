@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { format, startOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO } from "date-fns"
 import {
   ActivityIcon,
   BookmarkIcon,
+  BookmarkCheckIcon,
+  BrainCircuitIcon,
   CalendarIcon,
   RssIcon,
   TagIcon,
@@ -15,7 +17,9 @@ import {
   NewspaperIcon,
   SettingsIcon,
   HeartPulseIcon,
+  CheckIcon,
 } from "lucide-react"
+import { markAsReadAction, markAsUnreadAction, toggleBookmarkAction } from "../actions"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -57,6 +61,9 @@ type FeedItem = {
   url: string | null
   ogImageUrl: string | null
   publishedAt: string | null
+  isRead: boolean
+  isBookmarked: boolean
+  readingTimeMinutes: number
 }
 
 type Keyword = {
@@ -148,7 +155,16 @@ export default function DashboardClient({
   subscriptionsCount: number
 }) {
   const router = useRouter()
+  const [, startTransition] = useTransition()
   const knownCount = useRef(feedItems.length)
+
+  // Optimistic state for instant visual feedback
+  const [readIds, setReadIds] = useState<Set<string>>(
+    () => new Set(feedItems.filter((i) => i.isRead).map((i) => i.id))
+  )
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(
+    () => new Set(feedItems.filter((i) => i.isBookmarked).map((i) => i.id))
+  )
 
   // Keep knownCount in sync after router.refresh() delivers new props
   useEffect(() => {
@@ -180,6 +196,35 @@ export default function DashboardClient({
   const [dateTo, setDateTo] = useState<Date>(today)
   const [selectedFeed, setSelectedFeed] = useState<string>("all")
   const [selectedKeyword, setSelectedKeyword] = useState<string>("all")
+
+  function handleReadArticle(itemId: string) {
+    if (!readIds.has(itemId)) {
+      setReadIds((prev) => new Set(prev).add(itemId))
+      startTransition(() => { markAsReadAction({ feedItemId: itemId }) })
+    }
+  }
+
+  function handleToggleRead(itemId: string) {
+    if (readIds.has(itemId)) {
+      setReadIds((prev) => { const next = new Set(prev); next.delete(itemId); return next })
+      startTransition(() => { markAsUnreadAction({ feedItemId: itemId }) })
+    } else {
+      setReadIds((prev) => new Set(prev).add(itemId))
+      startTransition(() => { markAsReadAction({ feedItemId: itemId }) })
+    }
+  }
+
+  function handleToggleBookmark(itemId: string) {
+    const isCurrentlyBookmarked = bookmarkedIds.has(itemId)
+    if (isCurrentlyBookmarked) {
+      setBookmarkedIds((prev) => { const next = new Set(prev); next.delete(itemId); return next })
+    } else {
+      setBookmarkedIds((prev) => new Set(prev).add(itemId))
+    }
+    startTransition(() => {
+      toggleBookmarkAction({ feedItemId: itemId, isCurrentlyBookmarked })
+    })
+  }
 
   // Build a map of feedId → index for consistent styling
   const feedIndexMap = new Map(feeds.map((f, i) => [f.id, i]))
@@ -282,10 +327,45 @@ export default function DashboardClient({
               variant="ghost"
               className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
             >
+              <Link href="/dashboard/bookmarks">
+                <div className="flex items-center gap-1.5">
+                  <BookmarkIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Bookmarks</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  {bookmarkedIds.size}
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
               <Link href="/dashboard/fetch">
                 <div className="flex items-center gap-1.5">
                   <ActivityIcon className="size-3 text-amber-400" />
                   <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Fetch Logs</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
+                </div>
+                <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
+                  ↗
+                </div>
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="ghost"
+              className="h-auto flex-col items-end gap-1 px-3 py-2 rounded-lg border border-white/8 bg-white/4 hover:border-amber-500/35 hover:bg-white/6 transition-all duration-200"
+            >
+              <Link href="/dashboard/fetch_embedding">
+                <div className="flex items-center gap-1.5">
+                  <BrainCircuitIcon className="size-3 text-amber-400" />
+                  <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">Embed Logs</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
                 </div>
                 <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
                   ↗
@@ -302,6 +382,7 @@ export default function DashboardClient({
                 <div className="flex items-center gap-1.5">
                   <HeartPulseIcon className="size-3 text-amber-400" />
                   <span className="text-[10px] font-mono text-amber-400 tracking-widest uppercase">AP Health</span>
+                  <SettingsIcon className="size-3 text-muted-foreground" />
                 </div>
                 <div className="text-[1.6rem] font-mono font-light text-amber-400 leading-none tabular-nums self-end">
                   ↗
@@ -399,10 +480,13 @@ export default function DashboardClient({
               const matchedKeywords = getMatchedKeywords(item)
               const publishedDate = item.publishedAt ? parseISO(item.publishedAt) : null
 
+              const isRead = readIds.has(item.id)
+              const isBookmarked = bookmarkedIds.has(item.id)
+
               return (
                 <Card
                   key={item.id}
-                  className="group border-white/8 hover:border-amber-500/35 transition-all duration-300 bg-white/4 hover:bg-white/6 gap-0 py-0"
+                  className={`group border-white/8 hover:border-amber-500/35 transition-all duration-300 bg-white/4 hover:bg-white/6 gap-0 py-0 ${isRead ? "opacity-50 grayscale" : ""}`}
                 >
                   {/* OG image or gradient placeholder */}
                   <div className="h-36 relative overflow-hidden rounded-t-xl">
@@ -416,6 +500,25 @@ export default function DashboardClient({
                       <div className={`w-full h-full bg-gradient-to-br ${gradient}`} />
                     )}
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_20%,rgba(255,255,255,0.06),transparent)]" />
+                    <div className="absolute top-2 left-2">
+                      <Badge className="text-[9px] font-mono bg-black/40 text-white/70 border border-white/15 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                        {item.readingTimeMinutes > 10 ? "10+ 分鐘" : `${item.readingTimeMinutes} 分鐘`}
+                      </Badge>
+                    </div>
+                    <div className="absolute top-2 right-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-6 w-6 rounded-full backdrop-blur-sm ${isBookmarked ? "text-amber-400 bg-amber-500/20 hover:bg-amber-500/30" : "text-white/50 bg-black/30 hover:text-amber-400 hover:bg-amber-500/20"}`}
+                        onClick={() => handleToggleBookmark(item.id)}
+                        title={isBookmarked ? "Remove bookmark" : "Bookmark"}
+                      >
+                        {isBookmarked
+                          ? <BookmarkCheckIcon className="size-3" />
+                          : <BookmarkIcon className="size-3" />
+                        }
+                      </Button>
+                    </div>
                     <div className="absolute bottom-2.5 left-3 flex flex-wrap items-center gap-1.5">
                       <Badge className={`text-[9px] font-mono border px-1.5 py-0.5 rounded ${badge}`}>
                         {feedName}
@@ -428,6 +531,11 @@ export default function DashboardClient({
                           {kw}
                         </Badge>
                       ))}
+                      {isRead && (
+                        <Badge className="text-[9px] font-mono bg-white/10 text-white/50 border border-white/15 px-1.5 py-0.5 rounded">
+                          Read
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -444,15 +552,27 @@ export default function DashboardClient({
                   </CardContent>
 
                   <CardFooter className="px-4 pt-3 pb-3 flex items-center justify-between bg-transparent border-t-0">
-                    <span className="font-mono text-[10px] text-muted-foreground tracking-wide">
-                      {publishedDate ? format(publishedDate, "do MMM yyyy") : "—"}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-mono text-[10px] text-muted-foreground tracking-wide">
+                        {publishedDate ? format(publishedDate, "do MMM yyyy") : "—"}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-5 w-5 ml-1 ${isRead ? "text-white/30 hover:text-white/60" : "text-white/20 hover:text-white/50"}`}
+                        onClick={() => handleToggleRead(item.id)}
+                        title={isRead ? "Mark as unread" : "Mark as read"}
+                      >
+                        <CheckIcon className="size-3" />
+                      </Button>
+                    </div>
                     {item.url && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 gap-1.5 px-2 text-[11px] font-mono text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10"
                         asChild
+                        onClick={() => handleReadArticle(item.id)}
                       >
                         <a href={item.url} target="_blank" rel="noopener noreferrer">
                           Read Article

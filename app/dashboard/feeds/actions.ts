@@ -9,12 +9,15 @@ const uuidFormat = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 
 const FeedStatusEnum = z.enum(["pending", "active", "error", "paused"]);
 
+const FeedLanguageEnum = z.enum(["en", "zh-TW"]).nullable();
+
 const FeedFieldsSchema = z.object({
   title: z.string().max(500).nullable(),
   description: z.string().max(2000).nullable(),
   siteUrl: z.union([z.string().url(), z.literal("")]).nullable(),
   fetchStatus: FeedStatusEnum,
   fetchIntervalMinutes: z.number().int().min(1).max(10080),
+  language: FeedLanguageEnum,
 });
 
 const AddFeedSchema = FeedFieldsSchema.extend({
@@ -28,6 +31,7 @@ export async function addFeedAction(params: {
   siteUrl: string | null;
   fetchStatus: "pending" | "active" | "error" | "paused";
   fetchIntervalMinutes: number;
+  language: "en" | "zh-TW" | null;
 }) {
   const { userId } = await auth();
   if (!userId) return { error: "Unauthorized" };
@@ -74,6 +78,7 @@ export async function updateFeedAction(params: {
   siteUrl: string | null;
   fetchStatus: "pending" | "active" | "error" | "paused";
   fetchIntervalMinutes: number;
+  language: "en" | "zh-TW" | null;
 }) {
   const { userId } = await auth();
   if (!userId) return { error: "Unauthorized" };

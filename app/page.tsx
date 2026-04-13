@@ -7,13 +7,15 @@ import {
   BookmarkIcon,
   ArrowRightIcon,
   ZapIcon,
+  RadioIcon,
 } from "lucide-react"
-import { Show, SignInButton } from "@clerk/nextjs"
+import { Show } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
+import { SignInModalButton } from "./_components/sign-in-modal-button"
 
 const features = [
   {
-    icon: BookmarkIcon,
+    icon: RadioIcon,
     label: "Subscriptions",
     title: "Subscribe to any feed",
     description:
@@ -25,6 +27,13 @@ const features = [
     title: "Filter by keyword",
     description:
       "Define keywords to surface the articles that matter. Each keyword highlights matching titles and descriptions — case-sensitive or not.",
+  },
+  {
+    icon: BookmarkIcon,
+    label: "Bookmarks",
+    title: "Save articles for later",
+    description:
+      "Bookmark any article to revisit it whenever you want. Your saved articles are always one click away in the dashboard.",
   },
   {
     icon: ActivityIcon,
@@ -88,12 +97,7 @@ export default function HomePage() {
             </Button>
           </Show>
           <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button className="inline-flex items-center gap-2.5 h-11 px-6 bg-amber-500 text-black hover:bg-amber-400 font-mono text-xs tracking-widest uppercase font-semibold rounded-lg cursor-pointer">
-                Sign In to Continue
-                <ArrowRightIcon className="size-3.5" />
-              </button>
-            </SignInButton>
+            <SignInModalButton />
           </Show>
         </div>
       </div>
@@ -112,7 +116,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map(({ icon: Icon, label, title, description }) => (
             <div
               key={label}

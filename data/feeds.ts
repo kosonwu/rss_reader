@@ -31,6 +31,7 @@ export async function getAllFeedsDetailed() {
       fetchIntervalMinutes: feeds.fetchIntervalMinutes,
       lastFetchedAt: feeds.lastFetchedAt,
       lastFetchError: feeds.lastFetchError,
+      language: feeds.language,
       createdAt: feeds.createdAt,
     })
     .from(feeds)
@@ -43,6 +44,7 @@ export type FeedFields = {
   siteUrl: string | null;
   fetchStatus: "pending" | "active" | "error" | "paused";
   fetchIntervalMinutes: number;
+  language: "en" | "zh-TW" | null;
 };
 
 export async function addFeed(url: string, fields: FeedFields) {

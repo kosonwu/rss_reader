@@ -38,7 +38,7 @@ export async function getAvailableFeeds(userId: string) {
   const subscribedIds = subscribed.map((s) => s.feedId);
 
   const query = db
-    .select({ id: feeds.id, title: feeds.title, url: feeds.url })
+    .select({ id: feeds.id, title: feeds.title, url: feeds.url, description: feeds.description })
     .from(feeds);
 
   if (subscribedIds.length > 0) {

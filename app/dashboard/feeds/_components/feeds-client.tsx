@@ -19,6 +19,22 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,7 +63,11 @@ import {
 } from "@/components/ui/dialog";
 import { addFeedAction, removeFeedAction, updateFeedAction } from "../actions";
 
+const PAGE_SIZE = 10;
+
 type FetchStatus = "pending" | "active" | "error" | "paused";
+
+type FeedLanguage = "en" | "zh-TW";
 
 type Feed = {
   id: string;
@@ -59,6 +79,7 @@ type Feed = {
   fetchIntervalMinutes: number;
   lastFetchedAt: string | null;
   lastFetchError: string | null;
+  language: FeedLanguage | null;
   createdAt: string;
 };
 
@@ -95,12 +116,18 @@ const labelCls = "text-sm text-foreground/80";
 
 // ── Feed form fields (shared between Add and Edit) ────────────────────────────
 
+const LANGUAGE_OPTIONS: { value: FeedLanguage; label: string }[] = [
+  { value: "en", label: "EN — English" },
+  { value: "zh-TW", label: "TW — Traditional Chinese" },
+];
+
 type FeedFormState = {
   title: string;
   description: string;
   siteUrl: string;
   fetchStatus: FetchStatus;
   fetchIntervalMinutes: string;
+  language: FeedLanguage | null;
 };
 
 function FeedFormFields({
@@ -153,10 +180,7 @@ function FeedFormFields({
             value={state.fetchStatus}
             onValueChange={(v) => onChange({ fetchStatus: v as FetchStatus })}
           >
-            <SelectTrigger
-              id="ff-status"
-              className={`w-full ${inputCls}`}
-            >
+            <SelectTrigger id="ff-status" className={`w-full ${inputCls}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
@@ -185,11 +209,32 @@ function FeedFormFields({
         </div>
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="ff-language" className={labelCls}>Language</Label>
+        <Select
+          value={state.language ?? "none"}
+          onValueChange={(v) => onChange({ language: v === "none" ? null : v as FeedLanguage })}
+        >
+          <SelectTrigger id="ff-language" className={`w-full ${inputCls}`}>
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+            <SelectItem value="none" className="font-mono text-sm focus:bg-white/8 focus:text-foreground">
+              Not set
+            </SelectItem>
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="font-mono text-sm focus:bg-white/8 focus:text-foreground">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }
 
-// ── Add Dialog ───────────────────────────────────────────────────────────────
+// ── Add Dialog ────────────────────────────────────────────────────────────────
 
 function AddDialog({
   open,
@@ -205,6 +250,7 @@ function AddDialog({
     siteUrl: "",
     fetchStatus: "pending",
     fetchIntervalMinutes: "60",
+    language: "zh-TW",
   });
   const [isPending, startTransition] = useTransition();
 
@@ -222,6 +268,7 @@ function AddDialog({
         siteUrl: fields.siteUrl.trim() || null,
         fetchStatus: fields.fetchStatus,
         fetchIntervalMinutes: parseInt(fields.fetchIntervalMinutes, 10) || 60,
+        language: fields.language,
       });
       if (result?.error) {
         toast.error(result.error);
@@ -233,6 +280,7 @@ function AddDialog({
           siteUrl: "",
           fetchStatus: "pending",
           fetchIntervalMinutes: "60",
+          language: "zh-TW",
         });
         onOpenChange(false);
         toast.success("Feed added");
@@ -274,19 +322,11 @@ function AddDialog({
 
           <DialogFooter className="gap-2 pt-2">
             <DialogClose asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/15 bg-white/5 hover:bg-white/10"
-              >
+              <Button type="button" variant="outline" className="border-white/15 bg-white/5 hover:bg-white/10">
                 Cancel
               </Button>
             </DialogClose>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="bg-amber-500 text-black hover:bg-amber-400"
-            >
+            <Button type="submit" disabled={isPending} className="bg-amber-500 text-black hover:bg-amber-400">
               {isPending ? "Adding…" : "Add feed"}
             </Button>
           </DialogFooter>
@@ -296,7 +336,7 @@ function AddDialog({
   );
 }
 
-// ── Edit Dialog ──────────────────────────────────────────────────────────────
+// ── Edit Dialog ───────────────────────────────────────────────────────────────
 
 function EditDialog({
   feed,
@@ -313,6 +353,7 @@ function EditDialog({
     siteUrl: feed.siteUrl ?? "",
     fetchStatus: feed.fetchStatus,
     fetchIntervalMinutes: String(feed.fetchIntervalMinutes),
+    language: feed.language,
   });
   const [isPending, startTransition] = useTransition();
 
@@ -330,6 +371,7 @@ function EditDialog({
         siteUrl: fields.siteUrl.trim() || null,
         fetchStatus: fields.fetchStatus,
         fetchIntervalMinutes: parseInt(fields.fetchIntervalMinutes, 10) || 60,
+        language: fields.language,
       });
       if (result?.error) {
         toast.error(result.error);
@@ -361,19 +403,11 @@ function EditDialog({
 
           <DialogFooter className="gap-2 pt-2">
             <DialogClose asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/15 bg-white/5 hover:bg-white/10"
-              >
+              <Button type="button" variant="outline" className="border-white/15 bg-white/5 hover:bg-white/10">
                 Cancel
               </Button>
             </DialogClose>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="bg-amber-500 text-black hover:bg-amber-400"
-            >
+            <Button type="submit" disabled={isPending} className="bg-amber-500 text-black hover:bg-amber-400">
               {isPending ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
@@ -383,9 +417,9 @@ function EditDialog({
   );
 }
 
-// ── Feed Row ─────────────────────────────────────────────────────────────────
+// ── Feed Table Row ────────────────────────────────────────────────────────────
 
-function FeedRow({ feed }: { feed: Feed }) {
+function FeedTableRow({ feed }: { feed: Feed }) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -401,139 +435,158 @@ function FeedRow({ feed }: { feed: Feed }) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg border border-white/8 bg-white/4 hover:border-white/15 hover:bg-white/6 transition-all duration-200">
-        <div className="flex items-center gap-3 min-w-0">
-          <RssIcon className="size-3.5 text-amber-400 shrink-0" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm text-foreground truncate">
+      <TableRow className="border-white/8 hover:bg-white/4 transition-colors duration-150">
+        <TableCell>
+          <div className="flex items-center gap-2 min-w-0">
+            <RssIcon className="size-3.5 text-amber-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="font-mono text-sm text-foreground truncate block">
                 {displayTitle}
               </span>
-              <Badge
-                className={`text-[9px] font-mono border px-1.5 py-0.5 rounded shrink-0 ${status.className}`}
-              >
-                {status.label}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-[11px] text-muted-foreground font-mono truncate">
+              <span className="font-mono text-[11px] text-muted-foreground truncate block">
                 {feed.url}
               </span>
-              <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0">
-                {feed.lastFetchedAt
-                  ? `fetched ${format(new Date(feed.lastFetchedAt), "do MMM yyyy")}`
-                  : `added ${format(new Date(feed.createdAt), "do MMM yyyy")}`}
-              </span>
+              {feed.description && (
+                <span className="font-mono text-[11px] text-muted-foreground/60 block mt-0.5 truncate max-w-sm" title={feed.description}>
+                  {feed.description.length > 80 ? feed.description.slice(0, 80) + "…" : feed.description}
+                </span>
+              )}
             </div>
-            {feed.description && (
-              <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">
-                {feed.description}
-              </p>
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1.5">
+            <Badge className={`text-[9px] font-mono border px-1.5 py-0.5 rounded ${status.className}`}>
+              {status.label}
+            </Badge>
+            {feed.language && (
+              <Badge className="text-[9px] font-mono border px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border-blue-500/25">
+                {feed.language}
+              </Badge>
             )}
           </div>
-        </div>
+        </TableCell>
+        <TableCell className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+          {feed.lastFetchedAt
+            ? format(new Date(feed.lastFetchedAt), "do MMM yyyy")
+            : format(new Date(feed.createdAt), "do MMM yyyy")}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-1">
+            {feed.siteUrl && (
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+              >
+                <a href={feed.siteUrl} target="_blank" rel="noopener noreferrer" aria-label="Visit site">
+                  <ExternalLinkIcon className="size-3.5" />
+                </a>
+              </Button>
+            )}
 
-        <div className="flex items-center gap-1 shrink-0">
-          {feed.siteUrl && (
             <Button
-              asChild
               variant="ghost"
               size="icon"
               className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+              onClick={() => setEditOpen(true)}
+              aria-label={`Edit ${displayTitle}`}
             >
-              <a
-                href={feed.siteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Visit site"
-              >
-                <ExternalLinkIcon className="size-3.5" />
-              </a>
+              <PencilIcon className="size-3.5" />
             </Button>
-          )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
-            onClick={() => setEditOpen(true)}
-            aria-label={`Edit ${displayTitle}`}
-          >
-            <PencilIcon className="size-3.5" />
-          </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
-                disabled={isPending}
-                aria-label={`Remove ${displayTitle}`}
-              >
-                <Trash2Icon className="size-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
-                  Remove feed?
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground">
-                  <span className="font-mono text-amber-400">
-                    &ldquo;{displayTitle}&rdquo;
-                  </span>{" "}
-                  will be removed from your subscriptions.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-red-600 text-white hover:bg-red-500"
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                  disabled={isPending}
+                  aria-label={`Remove ${displayTitle}`}
                 >
-                  Remove
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+                  <Trash2Icon className="size-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
+                    Remove feed?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground">
+                    <span className="font-mono text-amber-400">&ldquo;{displayTitle}&rdquo;</span>{" "}
+                    will be removed from your subscriptions.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-red-600 text-white hover:bg-red-500">
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </TableCell>
+      </TableRow>
 
       <EditDialog feed={feed} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
 type StatusFilter = FetchStatus | "all";
+type LanguageFilter = FeedLanguage | "all";
 
 export default function FeedsClient({
   feeds,
   feedsCount,
   subscriptionsCount,
   keywordsCount,
+  bookmarksCount,
 }: {
   feeds: Feed[];
   feedsCount: number;
   subscriptionsCount: number;
   keywordsCount: number;
+  bookmarksCount: number;
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [titleFilter, setTitleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [languageFilter, setLanguageFilter] = useState<LanguageFilter>("all");
+  const [page, setPage] = useState(1);
 
   const filteredFeeds = feeds.filter((feed) => {
     const haystack = (feed.title ?? feed.url).toLowerCase();
     const matchesTitle = titleFilter === "" || haystack.includes(titleFilter.toLowerCase());
     const matchesStatus = statusFilter === "all" || feed.fetchStatus === statusFilter;
-    return matchesTitle && matchesStatus;
+    const matchesLanguage = languageFilter === "all" || feed.language === languageFilter;
+    return matchesTitle && matchesStatus && matchesLanguage;
   });
 
-  const isFiltered = titleFilter !== "" || statusFilter !== "all";
+  const totalPages = Math.ceil(filteredFeeds.length / PAGE_SIZE);
+  const pagedFeeds = filteredFeeds.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const isFiltered = titleFilter !== "" || statusFilter !== "all" || languageFilter !== "all";
+
+  function handleTitleFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setTitleFilter(e.target.value);
+    setPage(1);
+  }
+
+  function handleStatusFilterChange(v: string) {
+    setStatusFilter(v as StatusFilter);
+    setPage(1);
+  }
+
+  function handleLanguageFilterChange(v: string) {
+    setLanguageFilter(v as LanguageFilter);
+    setPage(1);
+  }
 
   return (
     <div className="dark min-h-screen bg-[oklch(0.09_0_0)] text-foreground">
@@ -571,28 +624,10 @@ export default function FeedsClient({
               feedsCount={feedsCount}
               subscriptionsCount={subscriptionsCount}
               keywordsCount={keywordsCount}
+              bookmarksCount={bookmarksCount}
               activePage="feeds"
             />
-            {(["active", "error", "paused", "pending"] as const).map((s) => {
-              const count = feeds.filter((f) => f.fetchStatus === s).length;
-              const colorMap: Record<FetchStatus, string> = {
-                active: "text-emerald-400",
-                error: "text-red-400",
-                paused: "text-zinc-400",
-                pending: "text-yellow-400",
-              };
-              return (
-                <div key={s} className="text-right">
-                  <div className={`text-[1.8rem] font-mono font-light leading-none tabular-nums ${colorMap[s]}`}>
-                    {count}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase font-mono">
-                    {s}
-                  </div>
-                </div>
-              );
-            })}
-            <Button
+<Button
               className="gap-2 bg-amber-500 text-black hover:bg-amber-400 font-mono text-xs shrink-0"
               onClick={() => setAddOpen(true)}
             >
@@ -606,20 +641,17 @@ export default function FeedsClient({
       {/* Filters */}
       {feeds.length > 0 && (
         <div className="border-b border-white/8 px-6 py-3 lg:px-10">
-          <div className="max-w-2xl mx-auto flex items-center gap-2">
+          <div className="max-w-4xl mx-auto flex items-center gap-2">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50 pointer-events-none" />
               <Input
                 value={titleFilter}
-                onChange={(e) => setTitleFilter(e.target.value)}
+                onChange={handleTitleFilterChange}
                 placeholder="Filter by title…"
                 className={`pl-8 h-8 text-xs font-mono ${inputCls}`}
               />
             </div>
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-            >
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className={`w-36 h-8 text-xs font-mono ${inputCls}`}>
                 <SelectValue />
               </SelectTrigger>
@@ -634,12 +666,27 @@ export default function FeedsClient({
                 ))}
               </SelectContent>
             </Select>
+            <Select value={languageFilter} onValueChange={handleLanguageFilterChange}>
+              <SelectTrigger className={`w-36 h-8 text-xs font-mono ${inputCls}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                <SelectItem value="all" className="font-mono text-xs focus:bg-white/8 focus:text-foreground">
+                  All languages
+                </SelectItem>
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="font-mono text-xs focus:bg-white/8 focus:text-foreground">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       )}
 
-      {/* List */}
-      <div className="max-w-2xl mx-auto px-6 py-8 lg:px-10">
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-6 py-8 lg:px-10">
         {feeds.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-muted-foreground gap-4">
             <RssIcon className="size-14 opacity-10" />
@@ -665,11 +712,66 @@ export default function FeedsClient({
                 {filteredFeeds.length} of {feeds.length} {feeds.length === 1 ? "feed" : "feeds"}
               </p>
             )}
-            <div className="flex flex-col gap-2">
-              {filteredFeeds.map((feed) => (
-                <FeedRow key={feed.id} feed={feed} />
-              ))}
+
+            <div className="rounded-lg border border-white/8 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/8 hover:bg-transparent">
+                    <TableHead className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Feed
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Status
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase whitespace-nowrap">
+                      Last fetched
+                    </TableHead>
+                    <TableHead className="w-[100px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagedFeeds.map((feed) => (
+                    <FeedTableRow key={feed.id} feed={feed} />
+                  ))}
+                </TableBody>
+              </Table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }}
+                        aria-disabled={page === 1}
+                        className={page === 1 ? "pointer-events-none opacity-40" : ""}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setPage(p); }}
+                          isActive={p === page}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }}
+                        aria-disabled={page === totalPages}
+                        className={page === totalPages ? "pointer-events-none opacity-40" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </>
         )}
       </div>

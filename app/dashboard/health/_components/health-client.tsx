@@ -233,10 +233,12 @@ export default function HealthClient({
   feedsCount,
   subscriptionsCount,
   keywordsCount,
+  bookmarksCount,
 }: {
   feedsCount: number
   subscriptionsCount: number
   keywordsCount: number
+  bookmarksCount: number
 }) {
   return (
     <div className="dark min-h-screen bg-[oklch(0.09_0_0)] text-foreground">
@@ -273,6 +275,7 @@ export default function HealthClient({
             feedsCount={feedsCount}
             subscriptionsCount={subscriptionsCount}
             keywordsCount={keywordsCount}
+            bookmarksCount={bookmarksCount}
             activePage="health"
           />
         </div>

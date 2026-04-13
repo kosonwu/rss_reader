@@ -13,6 +13,7 @@ from email.utils import parsedate_to_datetime
 
 import feedparser
 import httpx
+import trafilatura
 from bs4 import BeautifulSoup
 
 import database
@@ -109,12 +110,6 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
         except Exception:
             published_at = None
 
-    # Content: prefer full content over summary
-    content: str | None = None
-    if entry.get("content"):
-        content = entry["content"][0].get("value")
-    description = entry.get("summary")
-
     # Author
     author: str | None = None
     if entry.get("author"):
@@ -122,16 +117,51 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
     elif entry.get("authors"):
         author = entry["authors"][0].get("name")
 
-    # OG image — try to fetch from article page
+    description = entry.get("summary")
+
+    # --- 4-step content extraction pipeline ---
     og_image_url: str | None = None
+    content: str | None = None
+    content_source: str = "summary_only"
+
+    # Step 1: RSS full content — use if any text present
+    if entry.get("content"):
+        raw = entry["content"][0].get("value") or ""
+        plain = BeautifulSoup(raw, "html.parser").get_text(separator=" ", strip=True)
+        if plain:
+            content = plain
+            content_source = "feed_full"
+
+    # Fetch article page once — reused for OG image + trafilatura
     if url:
-        og_image_url = await _fetch_og_image(url)
+        og_image_url, page_html = await _fetch_article_page(url)
+
+        # Step 2: trafilatura extraction
+        if content is None and page_html:
+            extracted = trafilatura.extract(page_html, include_comments=False, include_tables=False)
+            if extracted and len(extracted.strip()) >= 100:
+                content = extracted.strip()
+                content_source = "extracted"
+
+        # Step 3: Jina Reader API — if content missing or too short
+        if content is None or len(content) < 100:
+            jina_content = await _fetch_jina(url)
+            if jina_content:
+                content = jina_content
+                content_source = "jina"
+
+    # Step 4: fallback to RSS description
+    if content is None:
+        plain_desc = BeautifulSoup(description or "", "html.parser").get_text(separator=" ", strip=True)
+        content = plain_desc or None
+        content_source = "summary_only"
 
     return {
         "guid": guid,
         "title": entry.get("title"),
         "description": description,
         "content": content,
+        "content_source": content_source,
         "url": url,
         "author": author,
         "og_image_url": og_image_url,
@@ -139,17 +169,29 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
     }
 
 
-async def _fetch_og_image(url: str) -> str | None:
-    """Best-effort: fetch article page and extract og:image meta tag."""
+async def _fetch_article_page(url: str) -> tuple[str | None, str | None]:
+    """Fetch article page once; return (og_image_url, raw_html)."""
     try:
         client = get_http_client()
         response = await client.get(url, timeout=10)
         if response.status_code != 200:
-            return None
-        soup = BeautifulSoup(response.text, "html.parser")
+            return None, None
+        html = response.text
+        soup = BeautifulSoup(html, "html.parser")
         tag = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "og:image"})
-        if tag and tag.get("content"):
-            return str(tag["content"])
+        og_image_url = str(tag["content"]) if tag and tag.get("content") else None
+        return og_image_url, html
+    except Exception:
+        return None, None
+
+
+async def _fetch_jina(url: str) -> str | None:
+    """Use Jina Reader (r.jina.ai) to extract plain-text article content."""
+    try:
+        client = get_http_client()
+        response = await client.get(f"https://r.jina.ai/{url}", timeout=20)
+        if response.status_code == 200 and response.text.strip():
+            return response.text.strip()
     except Exception:
         pass
     return None

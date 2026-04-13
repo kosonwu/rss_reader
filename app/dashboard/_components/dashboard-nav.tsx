@@ -3,7 +3,9 @@
 import Link from "next/link"
 import {
   ActivityIcon,
+  BookmarkCheckIcon,
   BookmarkIcon,
+  BrainCircuitIcon,
   HeartPulseIcon,
   RssIcon,
   SettingsIcon,
@@ -11,7 +13,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-type ActivePage = "feeds" | "subscriptions" | "keywords" | "fetch" | "health"
+type ActivePage = "feeds" | "subscriptions" | "keywords" | "fetch" | "fetch_embedding" | "health" | "bookmarks"
 
 type NavItem = {
   key: ActivePage
@@ -25,11 +27,13 @@ export default function DashboardNav({
   feedsCount,
   subscriptionsCount,
   keywordsCount,
+  bookmarksCount,
   activePage,
 }: {
   feedsCount: number
   subscriptionsCount: number
   keywordsCount: number
+  bookmarksCount?: number
   activePage?: ActivePage
 }) {
   const items: NavItem[] = [
@@ -55,10 +59,24 @@ export default function DashboardNav({
       value: keywordsCount,
     },
     {
+      key: "bookmarks",
+      label: "Bookmarks",
+      href: "/dashboard/bookmarks",
+      icon: <BookmarkCheckIcon className="size-3 text-amber-400" />,
+      value: bookmarksCount ?? "↗",
+    },
+    {
       key: "fetch",
       label: "Fetch Logs",
       href: "/dashboard/fetch",
       icon: <ActivityIcon className="size-3 text-amber-400" />,
+      value: "↗",
+    },
+    {
+      key: "fetch_embedding",
+      label: "Embed Logs",
+      href: "/dashboard/fetch_embedding",
+      icon: <BrainCircuitIcon className="size-3 text-amber-400" />,
       value: "↗",
     },
     {

@@ -13,6 +13,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import database
 from config import settings
+from embedding_service import run_embedding_job
 from feed_fetcher import fetch_feed
 
 logger = logging.getLogger(__name__)
@@ -65,8 +66,20 @@ def start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
     )
+    _scheduler.add_job(
+        run_embedding_job,
+        trigger="interval",
+        seconds=settings.embedding_coordinator_interval,
+        id="embedding_coordinator",
+        max_instances=1,
+        coalesce=True,
+    )
     _scheduler.start()
-    logger.info("scheduler started (interval=%ds)", settings.fetch_coordinator_interval)
+    logger.info(
+        "scheduler started (fetch_interval=%ds, embedding_interval=%ds)",
+        settings.fetch_coordinator_interval,
+        settings.embedding_coordinator_interval,
+    )
 
 
 def stop_scheduler() -> None:
