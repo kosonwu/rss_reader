@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
+import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -45,6 +47,16 @@ async def close_http_client() -> None:
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
+def _calc_reading_time(content: str | None, title: str | None = None) -> int:
+    """Mirrors the TypeScript calcReadingTime logic: CJK chars at 400/min, English words at 200/min."""
+    text = content or title or ""
+    chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff' or '\u3400' <= c <= '\u4dbf')
+    without_chinese = re.sub(r'[\u4e00-\u9fff\u3400-\u4dbf]', ' ', text)
+    english_words = len(without_chinese.split())
+    minutes = chinese_chars / 400 + english_words / 200
+    return max(1, math.ceil(minutes))
+
 
 async def fetch_feed(feed_id: str, feed_url: str) -> None:
     """Fetch one RSS feed, upsert items, update feed row, write fetch_log."""
@@ -166,6 +178,7 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
         "author": author,
         "og_image_url": og_image_url,
         "published_at": published_at,
+        "reading_time_minutes": _calc_reading_time(content, entry.get("title")),
     }
 
 

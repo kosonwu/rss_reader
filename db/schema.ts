@@ -4,8 +4,10 @@ import {
     customType,
     index,
     integer,
+    jsonb,
     pgEnum,
     pgTable,
+    real,
     text,
     timestamp,
     uniqueIndex,
@@ -54,6 +56,18 @@ export const fetchLogStatusEnum = pgEnum("fetch_log_status", [
 ]);
 
 export const embeddingLogStatusEnum = pgEnum("embedding_log_status", [
+    "success",
+    "failed",
+    "skipped",          // 無待處理 items 時略過
+]);
+
+export const tagExtractionLogStatusEnum = pgEnum("tag_extraction_log_status", [
+    "success",
+    "failed",
+    "skipped",          // 無待處理 items 時略過
+]);
+
+export const nerLogStatusEnum = pgEnum("ner_log_status", [
     "success",
     "failed",
     "skipped",          // 無待處理 items 時略過
@@ -132,6 +146,21 @@ export const feedItems = pgTable(
         embeddingTitle: vector("embedding_title", { dimensions: 384 }),        // 僅標題
         embeddingModel: text("embedding_model"),                               // 記錄產生時用的模型
         embeddedAt: timestamp("embedded_at", { withTimezone: true }),          // null = 尚未產生
+        // KeyBERT 自動萃取標籤
+        tags: text("tags").array(),                                            // 萃取出的關鍵字（5–8 個）
+        tagsScores: real("tags_scores").array(),                               // 每個關鍵字的相關度分數（0–1）
+        tagsModel: text("tags_model"),                                         // 使用的模型名稱
+        tagsExtractedAt: timestamp("tags_extracted_at", { withTimezone: true }), // null = 尚未萃取
+        // NER 命名實體辨識欄位
+        nerEntities: jsonb("ner_entities").$type<{ text: string; type: string }[]>(), // [{text, type}] — 統一 OntoNotes label namespace
+        nerModel: text("ner_model"),                                                // "ckip" | "spacy:en_core_web_sm"
+        nerExtractedAt: timestamp("ner_extracted_at", { withTimezone: true }),      // null = 尚未萃取
+        // display_tags — 由 NER + KeyBERT 計分後合併產出的顯示用標籤
+        displayTags: text("display_tags").array(),                                  // 依分數排序的 tag 文字陣列
+        displayTagsMeta: jsonb("display_tags_meta").$type<{ tag: string; type: string; score: number }[]>(), // 完整結構（tag, type, score）
+        displayTagsUpdatedAt: timestamp("display_tags_updated_at", { withTimezone: true }), // null = 尚未生成
+        // 閱讀時間（分鐘）— 由 fetcher 寫入時計算
+        readingTimeMinutes: integer("reading_time_minutes").notNull().default(1),
     },
     (table) => [
         uniqueIndex("idx_feed_items_feed_guid").on(table.feedId, table.guid),
@@ -142,6 +171,15 @@ export const feedItems = pgTable(
         index("idx_feed_items_embedding_content").using("hnsw", table.embeddingContent.op("vector_cosine_ops")),
         index("idx_feed_items_embedding_title").using("hnsw", table.embeddingTitle.op("vector_cosine_ops")),
         index("idx_feed_items_embedded_at").on(table.embeddedAt).where(sql`${table.embeddedAt} IS NULL`),
+        // KeyBERT 標籤 indexes
+        index("idx_feed_items_tags_extracted_at").on(table.tagsExtractedAt).where(sql`${table.tagsExtractedAt} IS NULL`),
+        index("idx_feed_items_tags_gin").using("gin", table.tags),
+        // NER indexes
+        index("idx_feed_items_ner_extracted_at").on(table.nerExtractedAt).where(sql`${table.nerExtractedAt} IS NULL`),
+        index("idx_feed_items_ner_entities_gin").using("gin", table.nerEntities),
+        // display_tags indexes
+        index("idx_feed_items_display_tags_updated_at").on(table.displayTagsUpdatedAt).where(sql`${table.displayTagsUpdatedAt} IS NULL`),
+        index("idx_feed_items_display_tags_gin").using("gin", table.displayTags),
     ],
 );
 
@@ -207,6 +245,81 @@ export const fetchEmbeddingLogs = pgTable(
     (table) => [
         index("idx_fetch_embedding_logs_run_at").on(table.runAt),
         index("idx_fetch_embedding_logs_status").on(table.status),
+    ],
+);
+
+// ---------------------------------------------------------------------------
+// fetch_tag_extraction_logs  ── KeyBERT 標籤萃取批次執行紀錄
+// ---------------------------------------------------------------------------
+
+export const fetchTagExtractionLogs = pgTable(
+    "fetch_tag_extraction_logs",
+    {
+        id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+        status: tagExtractionLogStatusEnum("status").notNull(),
+        itemsFetched: integer("items_fetched").notNull().default(0),   // 本次撈出的待萃取數量
+        itemsTagged: integer("items_tagged").notNull().default(0),     // 成功寫入標籤的數量
+        itemsSkipped: integer("items_skipped").notNull().default(0),   // 因無 title/content 跳過的數量
+        itemsRemainingAfter: integer("items_remaining_after"),         // 執行後仍未萃取的總筆數
+        durationMs: integer("duration_ms"),                            // 整批執行耗時（毫秒）
+        modelName: text("model_name"),                                 // 使用的模型名稱
+        errorMessage: text("error_message"),                           // failed 時記錄原因
+        runAt: timestamp("run_at", { withTimezone: true }).notNull().default(sql`now()`),
+    },
+    (table) => [
+        index("idx_fetch_tag_extraction_logs_run_at").on(table.runAt),
+        index("idx_fetch_tag_extraction_logs_status").on(table.status),
+    ],
+);
+
+// ---------------------------------------------------------------------------
+// fetch_ner_logs  ── NER 命名實體辨識批次執行紀錄
+// ---------------------------------------------------------------------------
+
+export const fetchNerLogs = pgTable(
+    "fetch_ner_logs",
+    {
+        id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+        status: nerLogStatusEnum("status").notNull(),
+        itemsFetched: integer("items_fetched").notNull().default(0),     // 本次撈出的待萃取數量
+        itemsTagged: integer("items_tagged").notNull().default(0),       // 成功寫入實體的數量
+        itemsSkipped: integer("items_skipped").notNull().default(0),     // 因無 content 跳過的數量
+        itemsRemainingAfter: integer("items_remaining_after"),           // 執行後仍未萃取的總筆數
+        durationMs: integer("duration_ms"),                              // 整批執行耗時（毫秒）
+        modelName: text("model_name"),                                   // "ckip" | "spacy:en_core_web_sm"
+        errorMessage: text("error_message"),                             // failed 時記錄原因
+        runAt: timestamp("run_at", { withTimezone: true }).notNull().default(sql`now()`),
+    },
+    (table) => [
+        index("idx_fetch_ner_logs_run_at").on(table.runAt),
+        index("idx_fetch_ner_logs_status").on(table.status),
+    ],
+);
+
+// ---------------------------------------------------------------------------
+// entity_tag_index  ── 跨文章實體趨勢追蹤
+// ---------------------------------------------------------------------------
+
+export const entityTagIndex = pgTable(
+    "entity_tag_index",
+    {
+        id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+        entityText: text("entity_text").notNull(),           // 原始文字（保留大小寫）
+        entityTextLower: text("entity_text_lower").notNull(), // 小寫正規化版本，供查詢用
+        entityType: text("entity_type").notNull(),            // ORG/PRODUCT/PERSON/GPE/LOC/tags
+        feedItemId: uuid("feed_item_id").notNull().references(() => feedItems.id, { onDelete: "cascade" }),
+        feedId: uuid("feed_id").notNull().references(() => feeds.id, { onDelete: "cascade" }), // 反正規化加速查詢
+        score: real("score").notNull(),                      // 來自 display_tags_meta 的計算分數
+        publishedAt: timestamp("published_at", { withTimezone: true }), // 反正規化自 feed_items
+        indexedAt: timestamp("indexed_at", { withTimezone: true }).notNull().default(sql`now()`),
+    },
+    (table) => [
+        uniqueIndex("idx_entity_tag_index_item_entity").on(table.feedItemId, table.entityTextLower),
+        index("idx_entity_tag_index_entity_text").on(table.entityTextLower),
+        index("idx_entity_tag_index_entity_type").on(table.entityType),
+        index("idx_entity_tag_index_published_at").on(table.publishedAt),
+        index("idx_entity_tag_index_entity_trend").on(table.entityTextLower, table.publishedAt),
+        index("idx_entity_tag_index_feed_id").on(table.feedId),
     ],
 );
 

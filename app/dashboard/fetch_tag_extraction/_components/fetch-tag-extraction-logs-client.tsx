@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import {
-  BrainCircuitIcon,
+  TagIcon,
   ArrowLeftIcon,
   CalendarIcon,
   CheckCircle2Icon,
@@ -44,11 +44,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-type EmbeddingLog = {
+type TagExtractionLog = {
   id: string;
   status: "success" | "failed" | "skipped";
   itemsFetched: number;
-  itemsEmbedded: number;
+  itemsTagged: number;
   itemsSkipped: number;
   itemsRemainingAfter: number | null;
   durationMs: number | null;
@@ -59,7 +59,7 @@ type EmbeddingLog = {
 
 // ── Status badge ───────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: EmbeddingLog["status"] }) {
+function StatusBadge({ status }: { status: TagExtractionLog["status"] }) {
   if (status === "success") {
     return (
       <Badge className="gap-1 text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded">
@@ -135,14 +135,14 @@ const PAGE_SIZE = 20;
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function FetchEmbeddingLogsClient({
+export default function FetchTagExtractionLogsClient({
   logs,
   feedsCount,
   subscriptionsCount,
   keywordsCount,
   bookmarksCount,
 }: {
-  logs: EmbeddingLog[];
+  logs: TagExtractionLog[];
   feedsCount: number;
   subscriptionsCount: number;
   keywordsCount: number;
@@ -187,7 +187,7 @@ export default function FetchEmbeddingLogsClient({
         <div className="max-w-7xl mx-auto flex items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <BrainCircuitIcon className="size-4 text-amber-400" />
+              <TagIcon className="size-4 text-amber-400" />
               <span className="text-[10px] font-mono text-amber-400 tracking-[0.25em] uppercase">
                 RSS Reader
               </span>
@@ -204,7 +204,7 @@ export default function FetchEmbeddingLogsClient({
               </Button>
             </div>
             <h1 className="text-[2.2rem] font-[family-name:var(--font-playfair)] font-bold tracking-tight leading-none">
-              Embedding Logs
+              Tag Extraction Logs
             </h1>
             <p className="text-xs font-mono text-muted-foreground mt-2 tracking-wide">
               {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
@@ -218,7 +218,7 @@ export default function FetchEmbeddingLogsClient({
               subscriptionsCount={subscriptionsCount}
               keywordsCount={keywordsCount}
               bookmarksCount={bookmarksCount}
-              activePage="fetch_embedding"
+              activePage="fetch_tag_extraction"
             />
             <div className="text-right">
               <div className="text-[16px] font-mono font-light text-emerald-400 leading-none tabular-nums">
@@ -264,8 +264,8 @@ export default function FetchEmbeddingLogsClient({
       <div className="max-w-7xl mx-auto px-6 py-8 lg:px-10">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-muted-foreground gap-4">
-            <BrainCircuitIcon className="size-14 opacity-10" />
-            <p className="font-mono text-sm">No embedding logs in this date range.</p>
+            <TagIcon className="size-14 opacity-10" />
+            <p className="font-mono text-sm">No tag extraction logs in this date range.</p>
           </div>
         ) : (
           <>
@@ -280,7 +280,7 @@ export default function FetchEmbeddingLogsClient({
                       Fetched
                     </TableHead>
                     <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[90px] text-right">
-                      Embedded
+                      Tagged
                     </TableHead>
                     <TableHead className="font-mono text-[10px] tracking-widest uppercase text-muted-foreground w-[90px] text-right">
                       Skipped
@@ -320,10 +320,10 @@ export default function FetchEmbeddingLogsClient({
                         </span>
                       </TableCell>
 
-                      {/* Items embedded */}
+                      {/* Items tagged */}
                       <TableCell className="py-3 text-right">
-                        <span className="font-mono text-xs tabular-nums text-sky-400">
-                          {log.itemsEmbedded}
+                        <span className="font-mono text-xs tabular-nums text-violet-400">
+                          {log.itemsTagged}
                         </span>
                       </TableCell>
 

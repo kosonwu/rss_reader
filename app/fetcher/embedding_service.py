@@ -1,7 +1,7 @@
 """
 Embedding background service.
 Encodes feed_items (title + content) into 384-dim vectors using
-sentence-transformers/all-MiniLM-L6-v2 and stores them in the DB.
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 and stores them in the DB.
 """
 
 from __future__ import annotations
@@ -15,20 +15,24 @@ from functools import partial
 from sentence_transformers import SentenceTransformer
 
 import database
+from config import settings
 
 logger = logging.getLogger(__name__)
 
-_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 _BATCH_SIZE = 10
 
 _model: SentenceTransformer | None = None
 
 
+def _model_display_name() -> str:
+    return f"sentence-transformers/{settings.embedding_model}"
+
+
 def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        logger.info("embedding: loading model %s", _MODEL_NAME)
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        logger.info("embedding: loading model %s", _model_display_name())
+        _model = SentenceTransformer(settings.embedding_model)
         logger.info("embedding: model loaded")
     return _model
 
@@ -113,7 +117,7 @@ async def _process_batch() -> dict:
             item_id=str(row["id"]),
             embedding_title=json.dumps(title_vec),
             embedding_content=json.dumps(content_vec),
-            model=_MODEL_NAME,
+            model=_model_display_name(),
         )
 
     logger.info("embedding: wrote vectors for %d item(s)", len(to_embed))
@@ -122,5 +126,5 @@ async def _process_batch() -> dict:
         "items_fetched": len(items),
         "items_embedded": len(to_embed),
         "items_skipped": len(to_skip),
-        "model_name": _MODEL_NAME,
+        "model_name": _model_display_name(),
     }

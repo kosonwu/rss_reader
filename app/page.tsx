@@ -8,6 +8,8 @@ import {
   ArrowRightIcon,
   ZapIcon,
   RadioIcon,
+  SearchIcon,
+  HashIcon,
 } from "lucide-react"
 import { Show } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -34,6 +36,20 @@ const features = [
     title: "Save articles for later",
     description:
       "Bookmark any article to revisit it whenever you want. Your saved articles are always one click away in the dashboard.",
+  },
+  {
+    icon: SearchIcon,
+    label: "Semantic Search",
+    title: "Search by meaning",
+    description:
+      "Find articles by concept, not just exact words. Queries are embedded and matched against stored article vectors using cosine similarity.",
+  },
+  {
+    icon: HashIcon,
+    label: "Auto Tags",
+    title: "KeyBERT topic tags",
+    description:
+      "Every article is automatically tagged with 5–8 topic keywords extracted by KeyBERT. Browse by topic or scan tags at a glance.",
   },
   {
     icon: ActivityIcon,

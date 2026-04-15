@@ -15,6 +15,8 @@ import database
 from config import settings
 from embedding_service import run_embedding_job
 from feed_fetcher import fetch_feed
+from tag_extraction_service import run_tag_extraction_job
+from ner_service import run_ner_job
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +76,29 @@ def start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
     )
+    _scheduler.add_job(
+        run_tag_extraction_job,
+        trigger="interval",
+        seconds=settings.tag_extraction_coordinator_interval,
+        id="tag_extraction_coordinator",
+        max_instances=1,
+        coalesce=True,
+    )
+    _scheduler.add_job(
+        run_ner_job,
+        trigger="interval",
+        seconds=settings.ner_coordinator_interval,
+        id="ner_coordinator",
+        max_instances=1,
+        coalesce=True,
+    )
     _scheduler.start()
     logger.info(
-        "scheduler started (fetch_interval=%ds, embedding_interval=%ds)",
+        "scheduler started (fetch_interval=%ds, embedding_interval=%ds, tag_extraction_interval=%ds, ner_interval=%ds)",
         settings.fetch_coordinator_interval,
         settings.embedding_coordinator_interval,
+        settings.tag_extraction_coordinator_interval,
+        settings.ner_coordinator_interval,
     )
 
 

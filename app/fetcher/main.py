@@ -5,11 +5,15 @@ Manages startup/shutdown of the DB pool, HTTP client, and scheduler.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from functools import partial
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 import database
+import embedding_service
 import scheduler as sched
 from config import settings
 from feed_fetcher import close_http_client, fetch_feed
@@ -71,7 +75,25 @@ async def trigger_fetch(feed_id: str) -> dict:
             status_code=400,
             detail=f"Feed status is '{row['fetch_status']}'; only 'active', 'error', or 'pending' feeds can be fetched",
         )
-    # Run in background so the HTTP response returns immediately
-    import asyncio
     asyncio.create_task(fetch_feed(str(row["id"]), str(row["url"])))
     return {"queued": True, "feed_id": feed_id, "url": str(row["url"])}
+
+
+class QueryRequest(BaseModel):
+    query: str
+    user_id: str
+    limit: int = 20
+
+
+@app.post("/embed/query")
+async def embed_and_search(req: QueryRequest) -> list[dict]:
+    """Embed a query string and return the most semantically similar feed items for a user."""
+    if not req.query.strip():
+        raise HTTPException(status_code=400, detail="query must not be empty")
+    model = embedding_service._get_model()
+    loop = asyncio.get_event_loop()
+    vecs = await loop.run_in_executor(
+        None, partial(embedding_service._encode, model, [req.query])
+    )
+    rows = await database.search_user_items(vecs[0], req.user_id, req.limit)
+    return [dict(row) for row in rows]

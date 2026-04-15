@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { feeds, userSubscriptions } from "@/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 
 export async function getUserFeeds(userId: string) {
   return db
@@ -36,6 +36,11 @@ export async function getAllFeedsDetailed() {
     })
     .from(feeds)
     .orderBy(asc(feeds.title));
+}
+
+export async function getAllFeedsCount(): Promise<number> {
+  const [row] = await db.select({ count: count() }).from(feeds)
+  return row?.count ?? 0
 }
 
 export type FeedFields = {

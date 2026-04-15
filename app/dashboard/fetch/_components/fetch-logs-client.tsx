@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format, parseISO, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import {
@@ -146,6 +147,14 @@ export default function FetchLogsClient({
   keywordsCount: number;
   bookmarksCount: number;
 }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const POLL_INTERVAL = 60_000 // 60 seconds
+    const id = setInterval(() => router.refresh(), POLL_INTERVAL)
+    return () => clearInterval(id)
+  }, [router])
+
   const today = new Date();
   const firstOfMonth = startOfMonth(today);
 

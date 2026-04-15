@@ -18,7 +18,14 @@
       "Bash(npx shadcn@latest:*)",
       "Bash(uv add:*)",
       "Bash(npx drizzle-kit:*)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(grep -r \"embed\" /c/Users/ZZ01M3858/rss_reader/app/fetcher/*.py)",
+      "Bash(ls /c/Users/ZZ01M3858/rss_reader/.env*)",
+      "Bash(pip show:*)",
+      "Bash(cat /c/Users/ZZ01M3858/rss_reader/app/fetcher/.venv/Lib/site-packages/sentence_transformers-*.dist-info/METADATA)",
+      "Bash(cat /c/Users/ZZ01M3858/rss_reader/app/fetcher/.venv/Lib/site-packages/keybert-*.dist-info/METADATA)",
+      "Bash(grep -E \"\\\\.py$|\\\\.toml$\")"
     ]
   },
   "enabledMcpjsonServers": [
