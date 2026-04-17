@@ -272,7 +272,7 @@ export default function FetchLogsClient({
             <div className="flex items-center gap-2 mb-2">
               <ActivityIcon className="size-4 text-amber-400" />
               <span className="text-[10px] font-mono text-amber-400 tracking-[0.25em] uppercase">
-                RSS Reader
+                Distill
               </span>
               <span className="text-white/20 text-[10px]">/</span>
               <Button

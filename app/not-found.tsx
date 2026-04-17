@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { RssIcon, ArrowLeftIcon } from "lucide-react"
+import { FlaskConicalIcon, ArrowLeftIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function NotFound() {
@@ -9,9 +9,9 @@ export default function NotFound() {
       {/* ── Header ── */}
       <div className="border-b border-white/8 px-6 py-7 lg:px-10">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
-          <RssIcon className="size-4 text-amber-400" />
+          <FlaskConicalIcon className="size-4 text-amber-400" />
           <span className="text-[10px] font-mono text-amber-400 tracking-[0.25em] uppercase">
-            RSS Reader
+            Distill
           </span>
         </div>
       </div>
@@ -45,9 +45,9 @@ export default function NotFound() {
       {/* ── Footer ── */}
       <div className="border-t border-white/8 px-6 py-6 lg:px-10">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
-          <RssIcon className="size-3.5 text-amber-400" />
+          <FlaskConicalIcon className="size-3.5 text-amber-400" />
           <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
-            RSS Reader
+            Distill
           </span>
         </div>
       </div>

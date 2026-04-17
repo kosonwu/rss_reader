@@ -1,13 +1,13 @@
+import React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
-  RssIcon,
+  FlaskConicalIcon,
   TagIcon,
   ActivityIcon,
   HeartPulseIcon,
   BookmarkIcon,
   ArrowRightIcon,
-  ZapIcon,
-  RadioIcon,
   SearchIcon,
   HashIcon,
   ScanTextIcon,
@@ -17,55 +17,49 @@ import { Show } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { SignInModalButton } from "./_components/sign-in-modal-button"
 
-const features = [
-  {
-    icon: RadioIcon,
-    label: "Subscriptions",
-    title: "Subscribe to any feed",
-    description:
-      "Add any RSS or Atom URL and subscribe. Manage display names and toggle sources on or off at any time.",
-  },
-  {
-    icon: TagIcon,
-    label: "Keywords",
-    title: "Filter by keyword",
-    description:
-      "Define keywords to surface the articles that matter. Matches across title, description, and full content — case-sensitive or not. Save any tag as a keyword in one click from the dashboard.",
-  },
-  {
-    icon: BookmarkIcon,
-    label: "Bookmarks",
-    title: "Save articles for later",
-    description:
-      "Bookmark any article to revisit it whenever you want. Use the tag chip to bulk-bookmark all articles sharing a tag at once — no need to save them one by one.",
-  },
+const features: { icon: React.ElementType; label: string; title: string; description: string; wide?: boolean }[] = [
   {
     icon: SearchIcon,
     label: "Semantic Search",
     title: "Search by meaning",
     description:
-      "Find articles by concept, not just exact words. Queries are embedded and matched against stored article vectors using cosine similarity.",
-  },
-  {
-    icon: HashIcon,
-    label: "Auto Tags",
-    title: "KeyBERT topic tags",
-    description:
-      "Every article is automatically tagged with 5–8 topic keywords extracted by KeyBERT. Browse by topic or scan tags at a glance.",
-  },
-  {
-    icon: ScanTextIcon,
-    label: "NER",
-    title: "Named entity recognition",
-    description:
-      "Every article is analysed for named entities — organisations, people, places, and products — using CKIP (zh-TW) and spaCy (en), normalised to a unified OntoNotes namespace.",
+      "Find articles by concept, not just keywords. Describe an idea or ask a question — Distill matches it against stored article embeddings to surface what's relevant.",
+    wide: true,
   },
   {
     icon: FlameIcon,
     label: "Hot Topics",
     title: "See what's trending",
     description:
-      "Ranked topic leaderboard for today, this week, and this month. Spot rising entities, track % change vs the prior period, and follow 30-day trend lines at a glance.",
+      "Ranked topic leaderboard for today, this week, and this month. Spot rising entities, track momentum vs the prior period, and follow trend lines at a glance.",
+  },
+  {
+    icon: TagIcon,
+    label: "Keywords",
+    title: "Surface what you care about",
+    description:
+      "Define keywords to filter articles that matter to you. Matches across title, description, and full content — case-sensitive or not. Save any tag as a keyword in one click.",
+  },
+  {
+    icon: HashIcon,
+    label: "Auto Tags",
+    title: "AI topic tags",
+    description:
+      "Every article is automatically tagged with up to 8 topic keywords using AI. Browse by topic, scan at a glance, or promote any tag into a keyword filter in one click.",
+  },
+  {
+    icon: ScanTextIcon,
+    label: "NER",
+    title: "Entity intelligence",
+    description:
+      "Every article is scanned for named entities — people, organisations, places, and products. Powered by CKIP (zh-TW) and spaCy (en), normalised to a unified namespace.",
+  },
+  {
+    icon: BookmarkIcon,
+    label: "Bookmarks",
+    title: "Save articles for later",
+    description:
+      "Bookmark any article to revisit whenever you want. Use tag chips to bulk-bookmark everything sharing a topic at once — no need to save them one by one.",
   },
   {
     icon: ActivityIcon,
@@ -95,12 +89,27 @@ export default function HomePage() {
         </div>
 
         <div className="relative max-w-4xl mx-auto">
-          {/* Brand label */}
-          <div className="flex items-center gap-2 mb-10">
-            <RssIcon className="size-4 text-amber-400" />
-            <span className="text-[10px] font-mono text-amber-400 tracking-[0.28em] uppercase">
-              RSS Reader
-            </span>
+
+          {/* Logo */}
+          <div className="mb-10 flex items-center gap-4">
+            <div className="relative rounded-2xl bg-amber-500/8 border border-amber-500/20 p-2.5 shadow-[0_0_32px_rgba(245,158,11,0.12)]">
+              <Image
+                src="/logo.svg"
+                alt="Distill logo"
+                width={72}
+                height={72}
+                priority
+                className="block"
+              />
+            </div>
+            <div>
+              <div className="text-[11px] font-mono text-amber-400/60 tracking-[0.3em] uppercase mb-1">
+                By Koson
+              </div>
+              <div className="font-[family-name:var(--font-playfair)] text-2xl font-bold tracking-tight text-foreground leading-none">
+                Distill
+              </div>
+            </div>
           </div>
 
           {/* Headline */}
@@ -110,10 +119,15 @@ export default function HomePage() {
             <span className="text-amber-400">actually matters.</span>
           </h1>
 
+          {/* Tagline */}
+          <p className="font-mono text-[1.15rem] font-semibold text-amber-400 tracking-wide mb-5">
+            Read less. Know more.
+          </p>
+
           {/* Subheadline */}
-          <p className="max-w-xl text-[1rem] leading-relaxed text-muted-foreground font-mono mb-10">
-            A focused RSS reader with keyword filtering, semantic search, auto-tagging, named entity
-            recognition, trending topic analytics, and full observability into every fetch run.
+          <p className="max-w-lg text-[0.95rem] leading-relaxed text-muted-foreground font-mono mb-10">
+            Connect your feeds. Distill's AI pipeline tags every article, extracts named entities,
+            tracks trending topics, and powers semantic search — so you read signal, not noise.
           </p>
 
           {/* CTA */}
@@ -139,20 +153,38 @@ export default function HomePage() {
         <div className="border-t border-white/8" />
       </div>
 
+      {/* ── Stats strip ── */}
+      <div className="max-w-4xl mx-auto px-6 py-8 lg:px-10">
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2">
+          {["Semantic search", "AI auto-tagging", "Entity extraction", "Trending topics"].map((item, i, arr) => (
+            <React.Fragment key={item}>
+              <span className="text-[11px] font-mono text-muted-foreground tracking-widest uppercase">
+                {item}
+              </span>
+              {i < arr.length - 1 && (
+                <span className="text-white/15 text-xs select-none">·</span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* ── Features ── */}
-      <div className="max-w-4xl mx-auto px-6 py-20 lg:px-10">
-        <div className="flex items-center gap-2 mb-10">
-          <ZapIcon className="size-3.5 text-amber-400" />
+      <div className="max-w-4xl mx-auto px-6 pb-20 lg:px-10">
+        <div className="mb-10">
           <span className="text-[10px] font-mono text-amber-400 tracking-[0.28em] uppercase">
-            What's included
+            Everything included.
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map(({ icon: Icon, label, title, description }) => (
+          {features.map(({ icon: Icon, label, title, description, wide }) => (
             <div
               key={label}
-              className="rounded-xl border border-white/8 bg-white/4 px-5 py-5 hover:border-amber-500/25 hover:bg-white/6 transition-all duration-200"
+              className={[
+                "rounded-xl border border-white/8 bg-white/4 px-5 py-5 hover:border-amber-500/25 hover:bg-white/6 transition-all duration-200",
+                wide ? "lg:col-span-2" : "",
+              ].join(" ")}
             >
               <div className="flex items-center gap-2 mb-3">
                 <Icon className="size-3.5 text-amber-400 shrink-0" />
@@ -175,9 +207,9 @@ export default function HomePage() {
       <div className="max-w-4xl mx-auto px-6 pb-10 lg:px-10">
         <div className="border-t border-white/8 pt-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <RssIcon className="size-3.5 text-amber-400" />
+            <FlaskConicalIcon className="size-3.5 text-amber-400" />
             <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
-              RSS Reader
+              Distill
             </span>
           </div>
           <span className="text-[10px] font-mono text-muted-foreground tracking-wide">

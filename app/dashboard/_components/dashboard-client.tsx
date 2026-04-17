@@ -10,6 +10,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   RssIcon,
+  FlaskConicalIcon,
   TagIcon,
   ExternalLinkIcon,
   FilterIcon,
@@ -20,6 +21,9 @@ import {
   AlertCircleIcon,
   ArrowLeftRightIcon,
   ChevronsUpDownIcon,
+  SearchIcon,
+  SparklesIcon,
+  BrainCircuitIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { markAsReadAction, markAsUnreadAction, toggleBookmarkAction, bulkBookmarkByTagAction } from "../actions"
@@ -57,6 +61,7 @@ import {
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
 import {
   Pagination,
   PaginationContent,
@@ -405,6 +410,10 @@ export default function DashboardClient({
   useEffect(() => { setLocalDateFrom(parseISO(datFromStr)) }, [datFromStr])
   useEffect(() => { setLocalDateTo(parseISO(datToStr)) }, [datToStr])
 
+  // Local input state for semantic search bar
+  const [searchInputValue, setSearchInputValue] = useState(searchQuery)
+  useEffect(() => { setSearchInputValue(searchQuery) }, [searchQuery])
+
   // Semantic search state — query driven by URL ?q= prop
   const [searchItems, setSearchItems] = useState<FeedItem[] | null>(null)
   const [isSearching, setIsSearching] = useState<boolean>(false)
@@ -571,6 +580,43 @@ export default function DashboardClient({
     })
   }
 
+  function commitSearch(value: string) {
+    const trimmed = value.trim()
+    const p = new URLSearchParams()
+    if (datFromStr !== todayStr) p.set("from", datFromStr)
+    if (datToStr !== todayStr) p.set("to", datToStr)
+    if (selectedFeed !== "all") p.set("feed", selectedFeed)
+    if (selectedKeyword !== "all") p.set("keyword", selectedKeyword)
+    if (selectedTag) p.set("tag", selectedTag)
+    if (sort === "preference") p.set("sort", "preference")
+    if (trimmed) p.set("q", trimmed)
+    const qs = p.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname)
+  }
+
+  function clearSearch() {
+    setSearchInputValue("")
+    commitSearch("")
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") commitSearch(searchInputValue)
+    if (e.key === "Escape") clearSearch()
+  }
+
+  function toggleSort(checked: boolean) {
+    const p = new URLSearchParams()
+    if (datFromStr !== todayStr) p.set("from", datFromStr)
+    if (datToStr !== todayStr) p.set("to", datToStr)
+    if (selectedFeed !== "all") p.set("feed", selectedFeed)
+    if (selectedKeyword !== "all") p.set("keyword", selectedKeyword)
+    if (selectedTag) p.set("tag", selectedTag)
+    if (checked) p.set("sort", "preference")
+    if (searchQuery) p.set("q", searchQuery)
+    const qs = p.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname)
+  }
+
   function handleResetDashboard() {
     setSearchItems(null)
     router.replace(pathname)
@@ -614,9 +660,9 @@ export default function DashboardClient({
         <div className="max-w-7xl mx-auto flex items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <RssIcon className="size-4 text-amber-400" />
+              <FlaskConicalIcon className="size-4 text-amber-400" />
               <span className="text-[10px] font-mono text-amber-400 tracking-[0.25em] uppercase">
-                RSS Reader
+                Distill
               </span>
             </div>
             <h1 className="text-[2.2rem] font-[family-name:var(--font-playfair)] font-bold tracking-tight leading-none">
@@ -658,7 +704,7 @@ export default function DashboardClient({
 
       {/* ── Filter bar ── */}
       <div className="sticky top-0 z-20 border-b border-white/8 bg-[oklch(0.09_0_0)]/92 backdrop-blur-xl px-6 py-3 lg:px-10">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2.5">
+        <div className="max-w-7xl mx-auto flex items-center gap-2.5 flex-wrap">
           <FilterIcon className="size-3.5 text-muted-foreground shrink-0 mr-0.5" />
 
           <DatePicker
@@ -747,13 +793,61 @@ export default function DashboardClient({
             </div>
           )}
 
-          {/* Search loading indicator — shown in filter bar when semantic search is active */}
-          {isSearching && (
-            <div className="ml-auto flex items-center gap-1.5 text-[10px] font-mono text-amber-400/70">
-              <Loader2Icon className="size-3 animate-spin" />
-              searching…
+          {/* ── Right side: Semantic Search + Smart Sort ── */}
+          <div className="ml-auto flex items-center gap-3 shrink-0">
+
+            {/* Semantic Search input */}
+            <div className="relative flex items-center">
+              <SearchIcon className="absolute left-2.5 size-3.5 text-amber-400 pointer-events-none z-10" />
+              <input
+                type="text"
+                placeholder="Semantic search… ↵"
+                value={searchInputValue}
+                onChange={(e) => setSearchInputValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="h-9 pl-8 pr-7 w-[210px] rounded-md font-mono text-xs text-white/90 placeholder:text-white/45 border border-amber-500/30 bg-white/5 hover:bg-white/8 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/20 transition-colors"
+              />
+              {searchInputValue && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2 text-white/35 hover:text-white/70 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <XIcon className="size-3" />
+                </button>
+              )}
+              {isSearching && (
+                <Loader2Icon className="absolute right-2 size-3 text-amber-400 animate-spin pointer-events-none" />
+              )}
+              {searchQuery && !isSearching && (
+                <div className="absolute -top-1.5 -right-1.5 flex items-center gap-0.5 text-[8px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1 py-0.5 rounded pointer-events-none">
+                  <BrainCircuitIcon className="size-2.5" />
+                  semantic
+                </div>
+              )}
             </div>
-          )}
+
+            <Separator orientation="vertical" className="h-7 bg-white/10" />
+
+            {/* Smart Sort toggle */}
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="pref-sort"
+                className={`flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.18em] cursor-pointer select-none transition-colors ${
+                  sort === "preference" ? "text-amber-400" : "text-white/55"
+                }`}
+              >
+                <SparklesIcon className="size-3 text-amber-400 shrink-0" />
+                Smart Sort
+              </label>
+              <Switch
+                id="pref-sort"
+                checked={sort === "preference"}
+                onCheckedChange={toggleSort}
+                className="data-[state=checked]:bg-amber-500 data-[state=unchecked]:bg-white/20"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

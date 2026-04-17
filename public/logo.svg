@@ -1,0 +1,26 @@
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flask body -->
+  <path
+    d="M31 10 L31 32 L14 58 Q11.5 63 16 65 L64 65 Q68.5 63 66 58 L49 32 L49 10 Z"
+    fill="rgba(245,158,11,0.10)"
+    stroke="#f59e0b"
+    stroke-width="2.4"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+  <!-- Neck cap -->
+  <rect x="28" y="7" width="24" height="5" rx="2.5" fill="#f59e0b" opacity="0.85"/>
+  <!-- Liquid fill inside flask -->
+  <path
+    d="M19 58 Q17.5 62 22 64 L58 64 Q62.5 62 61 58 L46 36 L34 36 Z"
+    fill="rgba(245,158,11,0.18)"
+  />
+  <!-- Bubble 1 -->
+  <circle cx="30" cy="52" r="3.5" fill="rgba(245,158,11,0.45)"/>
+  <!-- Bubble 2 -->
+  <circle cx="42" cy="44" r="2.5" fill="rgba(245,158,11,0.35)"/>
+  <!-- Bubble 3 -->
+  <circle cx="36" cy="57" r="1.8" fill="rgba(245,158,11,0.30)"/>
+  <!-- Shine line on flask neck -->
+  <line x1="35" y1="11" x2="35" y2="30" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

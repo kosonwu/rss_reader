@@ -7,6 +7,7 @@ import {
   PlusIcon,
   Trash2Icon,
   RssIcon,
+  FlaskConicalIcon,
   PencilIcon,
   ArrowLeftIcon,
   ExternalLinkIcon,
@@ -595,9 +596,9 @@ export default function FeedsClient({
         <div className="max-w-7xl mx-auto flex items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <RssIcon className="size-4 text-amber-400" />
+              <FlaskConicalIcon className="size-4 text-amber-400" />
               <span className="text-[10px] font-mono text-amber-400 tracking-[0.25em] uppercase">
-                RSS Reader
+                Distill
               </span>
               <span className="text-white/20 text-[10px]">/</span>
               <Button

@@ -6,7 +6,7 @@ export default function HeaderAuthContent() {
   return (
     <>
       <Show when="signed-out">
-        <SignInButton mode="modal">
+        <SignInButton mode="modal" forceRedirectUrl="/dashboard">
           <button className="h-8 px-4 font-mono text-[11px] tracking-widest uppercase text-amber-400 border border-amber-500/30 rounded-md bg-amber-500/5 hover:bg-amber-500/15 transition-colors cursor-pointer">
             Sign In
           </button>

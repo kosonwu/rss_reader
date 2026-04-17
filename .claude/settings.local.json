@@ -27,7 +27,9 @@
       "Bash(cat /c/Users/ZZ01M3858/rss_reader/app/fetcher/.venv/Lib/site-packages/keybert-*.dist-info/METADATA)",
       "Bash(grep -E \"\\\\.py$|\\\\.toml$\")",
       "Bash(pip show *)",
-      "Bash(uv run *)"
+      "Bash(uv run *)",
+      "Bash(python -c \"import en_core_web_sm; import os; print\\(os.path.dirname\\(en_core_web_sm.__file__\\)\\)\")",
+      "Bash(powershell *)"
     ]
   },
   "enabledMcpjsonServers": [
