@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { format, parseISO, startOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import {
   ActivityIcon,
   ArrowLeftIcon,
@@ -14,12 +14,22 @@ import {
   ClockIcon,
   FilterIcon,
   RssIcon,
+  ChevronsUpDownIcon,
+  CheckIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardNav from "@/app/dashboard/_components/dashboard-nav";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Select,
   SelectContent,
@@ -118,13 +128,80 @@ function DatePicker({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="dark w-auto p-0 bg-[oklch(0.13_0_0)] border-white/15 shadow-xl shadow-black/50" align="start">
         <Calendar
           mode="single"
           selected={date}
           onSelect={(d) => d && onSelect(d)}
           initialFocus
         />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ── Feed Combobox ──────────────────────────────────────────────────────────────
+
+function FeedCombobox({
+  feeds,
+  value,
+  onChange,
+}: {
+  feeds: { id: string; title: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = feeds.find((f) => f.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 min-w-[180px] justify-between font-mono text-xs border-white/15 bg-white/5 hover:bg-white/10 focus:ring-0 focus:ring-offset-0"
+        >
+          <span className="truncate">
+            {selected ? selected.title : "All feeds"}
+          </span>
+          <ChevronsUpDownIcon className="ml-2 size-3.5 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="dark w-[280px] p-0 bg-[oklch(0.13_0_0)] border-white/15 shadow-xl shadow-black/50" align="start">
+        <Command className="bg-transparent">
+          <CommandInput
+            placeholder="Search feeds..."
+            className="font-mono text-xs h-9 text-foreground placeholder:text-muted-foreground"
+          />
+          <CommandList>
+            <CommandEmpty className="font-mono text-xs text-muted-foreground py-4 text-center">
+              No feed found.
+            </CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="all"
+                onSelect={() => { onChange("all"); setOpen(false); }}
+                className="font-mono text-xs text-foreground data-selected:bg-white/8 data-selected:text-foreground rounded-md"
+              >
+                <CheckIcon className={`mr-2 size-3.5 text-amber-400 ${value === "all" ? "opacity-100" : "opacity-0"}`} />
+                All feeds
+              </CommandItem>
+              {feeds.map((feed) => (
+                <CommandItem
+                  key={feed.id}
+                  value={feed.title}
+                  onSelect={() => { onChange(feed.id); setOpen(false); }}
+                  className="font-mono text-xs text-foreground data-selected:bg-white/8 data-selected:text-foreground rounded-md"
+                >
+                  <CheckIcon className={`mr-2 size-3.5 text-amber-400 ${value === feed.id ? "opacity-100" : "opacity-0"}`} />
+                  {feed.title}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   );
@@ -156,7 +233,6 @@ export default function FetchLogsClient({
   }, [router])
 
   const today = new Date();
-  const firstOfMonth = startOfMonth(today);
 
   const [dateFrom, setDateFrom] = useState<Date>(today);
   const [dateTo, setDateTo] = useState<Date>(today);
@@ -253,27 +329,15 @@ export default function FetchLogsClient({
           <FilterIcon className="size-3.5 text-muted-foreground shrink-0 mr-0.5" />
           <DatePicker date={dateFrom} onSelect={handleDateFrom} label="From" />
           <DatePicker date={dateTo} onSelect={handleDateTo} label="To" />
-          <Select value={feedFilter} onValueChange={handleFeedFilter}>
-            <SelectTrigger className="h-9 min-w-[180px] font-mono text-xs border-white/15 bg-white/5 hover:bg-white/10 focus:ring-0 focus:ring-offset-0">
-              <SelectValue placeholder="All feeds" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-mono text-xs">All feeds</SelectItem>
-              {uniqueFeeds.map((feed) => (
-                <SelectItem key={feed.id} value={feed.id} className="font-mono text-xs">
-                  {feed.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FeedCombobox feeds={uniqueFeeds} value={feedFilter} onChange={handleFeedFilter} />
           <Select value={statusFilter} onValueChange={handleStatusFilter}>
             <SelectTrigger className="h-9 min-w-[140px] font-mono text-xs border-white/15 bg-white/5 hover:bg-white/10 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-mono text-xs">All statuses</SelectItem>
-              <SelectItem value="success" className="font-mono text-xs">Success</SelectItem>
-              <SelectItem value="failed" className="font-mono text-xs">Failed</SelectItem>
+            <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/15 shadow-xl shadow-black/50">
+              <SelectItem value="all" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">All statuses</SelectItem>
+              <SelectItem value="success" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">Success</SelectItem>
+              <SelectItem value="failed" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">Failed</SelectItem>
             </SelectContent>
           </Select>
         </div>

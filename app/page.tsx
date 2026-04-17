@@ -10,6 +10,8 @@ import {
   RadioIcon,
   SearchIcon,
   HashIcon,
+  ScanTextIcon,
+  FlameIcon,
 } from "lucide-react"
 import { Show } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
@@ -28,14 +30,14 @@ const features = [
     label: "Keywords",
     title: "Filter by keyword",
     description:
-      "Define keywords to surface the articles that matter. Each keyword highlights matching titles and descriptions — case-sensitive or not.",
+      "Define keywords to surface the articles that matter. Matches across title, description, and full content — case-sensitive or not. Save any tag as a keyword in one click from the dashboard.",
   },
   {
     icon: BookmarkIcon,
     label: "Bookmarks",
     title: "Save articles for later",
     description:
-      "Bookmark any article to revisit it whenever you want. Your saved articles are always one click away in the dashboard.",
+      "Bookmark any article to revisit it whenever you want. Use the tag chip to bulk-bookmark all articles sharing a tag at once — no need to save them one by one.",
   },
   {
     icon: SearchIcon,
@@ -50,6 +52,20 @@ const features = [
     title: "KeyBERT topic tags",
     description:
       "Every article is automatically tagged with 5–8 topic keywords extracted by KeyBERT. Browse by topic or scan tags at a glance.",
+  },
+  {
+    icon: ScanTextIcon,
+    label: "NER",
+    title: "Named entity recognition",
+    description:
+      "Every article is analysed for named entities — organisations, people, places, and products — using CKIP (zh-TW) and spaCy (en), normalised to a unified OntoNotes namespace.",
+  },
+  {
+    icon: FlameIcon,
+    label: "Hot Topics",
+    title: "See what's trending",
+    description:
+      "Ranked topic leaderboard for today, this week, and this month. Spot rising entities, track % change vs the prior period, and follow 30-day trend lines at a glance.",
   },
   {
     icon: ActivityIcon,
@@ -96,8 +112,8 @@ export default function HomePage() {
 
           {/* Subheadline */}
           <p className="max-w-xl text-[1rem] leading-relaxed text-muted-foreground font-mono mb-10">
-            A focused RSS reader with per-user keyword filtering, automated background fetching,
-            and full observability into every fetch run.
+            A focused RSS reader with keyword filtering, semantic search, auto-tagging, named entity
+            recognition, trending topic analytics, and full observability into every fetch run.
           </p>
 
           {/* CTA */}

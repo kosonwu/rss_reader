@@ -194,6 +194,7 @@ export const keywords = pgTable(
         userId: text("user_id").notNull(),
         keyword: text("keyword").notNull(),
         isCaseSensitive: boolean("is_case_sensitive").notNull().default(false),
+        source: text("source").notNull().default("manual"),  // "manual" | "tag"
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
     },
     (table) => [
@@ -352,10 +353,38 @@ export const userBookmarks = pgTable(
         userId: text("user_id").notNull(),
         feedItemId: uuid("feed_item_id").notNull().references(() => feedItems.id, { onDelete: "cascade" }),
         bookmarkedAt: timestamp("bookmarked_at", { withTimezone: true }).notNull().default(sql`now()`),
+        removedAt: timestamp("removed_at", { withTimezone: true }), // null = active, non-null = soft deleted
     },
     (table) => [
         uniqueIndex("idx_user_bookmarks_user_item").on(table.userId, table.feedItemId),
         index("idx_user_bookmarks_user_id").on(table.userId),
+        index("idx_user_bookmarks_active").on(table.userId).where(sql`${table.removedAt} IS NULL`),
+    ],
+);
+
+// ---------------------------------------------------------------------------
+// user_profiles  ── per-user 興趣側寫（離線批次計算）
+// ---------------------------------------------------------------------------
+
+export const userProfiles = pgTable(
+    "user_profiles",
+    {
+        id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+        userId: text("user_id").notNull().unique(),
+        // 品味向量：bookmarked feed_items 的 embeddingContent 加權平均（384-dim）
+        // weight = retention 強度（仍保留 = 1.0 / log(days+1) / 0.1 for <24h removed）
+        tasteVector: vector("taste_vector", { dimensions: 384 }),
+        // 標籤興趣排行：[{ tag, freq, type }]，依 freq DESC 排列，top-10
+        topTags: jsonb("top_tags").$type<{ tag: string; freq: number; type: string }[]>(),
+        // 計算此 profile 時使用的 active bookmark 數量（用於判斷 profile 是否有意義）
+        bookmarkCount: integer("bookmark_count").notNull().default(0),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+    },
+    (table) => [
+        index("idx_user_profiles_user_id").on(table.userId),
+        index("idx_user_profiles_updated_at").on(table.updatedAt),
+        // HNSW index 供未來 nearest-neighbour 查詢（如：找品味相近的使用者）
+        index("idx_user_profiles_taste_vector").using("hnsw", table.tasteVector.op("vector_cosine_ops")),
     ],
 );
 

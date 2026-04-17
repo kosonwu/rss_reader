@@ -164,7 +164,7 @@ function AddDialog({
         setValue("");
         setCaseSensitive(false);
         onOpenChange(false);
-        toast.success("Keyword added");
+        toast.success(`Saved '${value}' as keyword`);
       }
     });
   }

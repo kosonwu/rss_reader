@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { addBookmark, removeBookmark, markItemAsRead, markItemAsUnread } from "@/data/bookmarks";
+import { addBookmark, removeBookmark, markItemAsRead, markItemAsUnread, bulkAddBookmarksByTag } from "@/data/bookmarks";
 
 const uuidFormat =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
@@ -27,6 +27,25 @@ export async function markAsUnreadAction(params: { feedItemId: string }) {
   await markItemAsUnread(userId, parsed.data.feedItemId);
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/bookmarks");
+}
+
+export async function bulkBookmarkByTagAction(params: {
+  tag: string
+  dateFrom: string
+  dateTo: string
+}) {
+  const { userId } = await auth();
+  if (!userId) return { error: "Unauthorized" };
+  if (!params.tag || params.tag.trim() === "") return { error: "Invalid tag" };
+  const count = await bulkAddBookmarksByTag(
+    userId,
+    params.tag.trim(),
+    new Date(params.dateFrom),
+    new Date(params.dateTo),
+  );
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/bookmarks");
+  return { count };
 }
 
 export async function toggleBookmarkAction(params: {

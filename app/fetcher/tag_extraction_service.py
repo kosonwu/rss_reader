@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 from ckip_transformers.nlp import CkipWordSegmenter
 from keybert import KeyBERT
+from sklearn.feature_extraction.text import CountVectorizer
 from keybert.backend._base import BaseEmbedder
 from sentence_transformers.base.modality import is_audio_url_or_path
 
@@ -121,10 +122,12 @@ def _extract_tags(kb: KeyBERT, text: str, language: str | None) -> list[tuple[st
     else:
         ngram_range = (1, 2)
         stop_words = _STOP_WORDS_EN or None
+    # lowercase=False preserves original casing (e.g. "Apple" stays "Apple").
+    # CountVectorizer defaults to lowercase=True, which would silently downcase all candidates.
+    vectorizer = CountVectorizer(ngram_range=ngram_range, stop_words=stop_words, lowercase=False)
     return kb.extract_keywords(
         text,
-        keyphrase_ngram_range=ngram_range,
-        stop_words=stop_words,
+        vectorizer=vectorizer,
         top_n=_TOP_N,
         use_mmr=True,       # Maximal Marginal Relevance for diversity
         diversity=0.5,

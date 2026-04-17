@@ -25,7 +25,9 @@
       "Bash(pip show:*)",
       "Bash(cat /c/Users/ZZ01M3858/rss_reader/app/fetcher/.venv/Lib/site-packages/sentence_transformers-*.dist-info/METADATA)",
       "Bash(cat /c/Users/ZZ01M3858/rss_reader/app/fetcher/.venv/Lib/site-packages/keybert-*.dist-info/METADATA)",
-      "Bash(grep -E \"\\\\.py$|\\\\.toml$\")"
+      "Bash(grep -E \"\\\\.py$|\\\\.toml$\")",
+      "Bash(pip show *)",
+      "Bash(uv run *)"
     ]
   },
   "enabledMcpjsonServers": [

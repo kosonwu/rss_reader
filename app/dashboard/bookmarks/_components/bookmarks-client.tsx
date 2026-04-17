@@ -9,7 +9,9 @@ import {
   CheckIcon,
   ExternalLinkIcon,
   NewspaperIcon,
+  TagIcon,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/card"
 import DashboardNav from "@/app/dashboard/_components/dashboard-nav"
 import { markAsReadAction, markAsUnreadAction, toggleBookmarkAction } from "../../actions"
+import { createKeywordAction } from "../../keywords/actions"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -40,12 +43,20 @@ type Bookmark = {
   ogImageUrl: string | null
   publishedAt: string | null
   bookmarkedAt: string
+  displayTags: string[] | null
+  readingTimeMinutes: number
   isRead: boolean
 }
 
 type Keyword = {
   id: string
   keyword: string
+}
+
+type TopTag = {
+  tag: string
+  freq: number
+  type: string
 }
 
 // ── Style palette ──────────────────────────────────────────────────────────────
@@ -86,6 +97,7 @@ export default function BookmarksClient({
   keywords,
   subscriptionsCount,
   keywordsCount,
+  topTags = [],
 }: {
   bookmarks: Bookmark[]
   feeds: Feed[]
@@ -93,8 +105,13 @@ export default function BookmarksClient({
   keywords: Keyword[]
   subscriptionsCount: number
   keywordsCount: number
+  topTags?: TopTag[]
 }) {
   const [, startTransition] = useTransition()
+  const [, startKeywordTransition] = useTransition()
+  const [addedTags, setAddedTags] = useState<Set<string>>(() =>
+    new Set(keywords.map((kw) => kw.keyword.toLowerCase()))
+  )
 
   const [readIds, setReadIds] = useState<Set<string>>(
     () => new Set(bookmarks.filter((b) => b.isRead).map((b) => b.id)),
@@ -134,6 +151,18 @@ export default function BookmarksClient({
     setRemovedIds((prev) => new Set(prev).add(itemId))
     startTransition(() => {
       toggleBookmarkAction({ feedItemId: itemId, isCurrentlyBookmarked: true })
+    })
+  }
+
+  function handleAddTagAsKeyword(tag: string) {
+    setAddedTags((prev) => new Set(prev).add(tag.toLowerCase()))
+    startKeywordTransition(async () => {
+      const result = await createKeywordAction({ keyword: tag, isCaseSensitive: false, source: "tag" })
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success(`Saved '${tag}' as keyword`)
+      }
     })
   }
 
@@ -190,6 +219,40 @@ export default function BookmarksClient({
         </div>
       </div>
 
+      {/* ── Top tags from user profile ── */}
+      {topTags.length > 0 && (
+        <div className="border-b border-white/8 px-6 py-4 lg:px-10">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-mono text-muted-foreground tracking-[0.15em] uppercase shrink-0 mr-1">
+              Your Interests
+            </span>
+            {topTags.map(({ tag }) => {
+              const isAdded = addedTags.has(tag.toLowerCase())
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  disabled={isAdded}
+                  onClick={() => !isAdded && handleAddTagAsKeyword(tag)}
+                  title={isAdded ? `'${tag}' already saved as keyword` : `Save '${tag}' as keyword`}
+                  className={`flex items-center gap-1.5 h-7 rounded-md border px-2.5 font-mono text-xs transition-colors duration-150 ${
+                    isAdded
+                      ? "bg-violet-500/15 border-violet-400/30 text-violet-300/50 cursor-default"
+                      : "bg-violet-500/15 border-violet-400/30 text-violet-300 hover:bg-violet-500/25 hover:border-violet-400/50 cursor-pointer"
+                  }`}
+                >
+                  <span>{tag}</span>
+                  {isAdded
+                    ? <CheckIcon className="size-3 opacity-60" />
+                    : <TagIcon className="size-3" />
+                  }
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Article grid ── */}
       <div className="max-w-7xl mx-auto px-6 py-8 lg:px-10">
         {visible.length === 0 ? (
@@ -228,6 +291,20 @@ export default function BookmarksClient({
                       <div className={`w-full h-full bg-gradient-to-br ${gradient}`} />
                     )}
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_20%,rgba(255,255,255,0.06),transparent)]" />
+                    {/* Display tags — top-left */}
+                    {item.displayTags && item.displayTags.length > 0 && (
+                      <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+                        {[...item.displayTags].sort((a, b) => a.length - b.length).slice(0, 5).map((tag) => (
+                          <Badge
+                            key={tag}
+                            className="text-[9px] font-mono bg-violet-950/80 text-violet-200 border-violet-700/40 border px-1.5 py-0.5 rounded"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {/* Remove bookmark — top-right */}
                     <div className="absolute top-2 right-2">
                       <Button
                         variant="ghost"
@@ -239,6 +316,13 @@ export default function BookmarksClient({
                         <BookmarkCheckIcon className="size-3" />
                       </Button>
                     </div>
+                    {/* Reading time — bottom-right */}
+                    <div className="absolute bottom-2 right-2">
+                      <Badge className="text-[9px] font-mono bg-black/40 text-white/70 border border-white/15 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                        {item.readingTimeMinutes > 10 ? "10+ 分鐘" : `${item.readingTimeMinutes} 分鐘`}
+                      </Badge>
+                    </div>
+                    {/* Feed + keyword + read badges — bottom-left */}
                     <div className="absolute bottom-2.5 left-3 flex flex-wrap items-center gap-1.5">
                       <Badge className={`text-[9px] font-mono border px-1.5 py-0.5 rounded ${badge}`}>
                         {feedName}
@@ -246,7 +330,7 @@ export default function BookmarksClient({
                       {matchedKeywords.map((kw) => (
                         <Badge
                           key={kw}
-                          className="text-[9px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded"
+                          className="text-[9px] font-mono border px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-200 border-emerald-400/40 backdrop-blur-sm"
                         >
                           {kw}
                         </Badge>

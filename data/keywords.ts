@@ -6,10 +6,11 @@ export async function createKeyword(
   userId: string,
   keyword: string,
   isCaseSensitive: boolean,
+  source: "manual" | "tag" = "manual",
 ) {
   return db
     .insert(keywords)
-    .values({ userId, keyword, isCaseSensitive })
+    .values({ userId, keyword, isCaseSensitive, source })
     .returning({ id: keywords.id });
 }
 

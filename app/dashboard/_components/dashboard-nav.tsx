@@ -8,6 +8,7 @@ import {
   BookmarkIcon,
   BrainCircuitIcon,
   ChevronDownIcon,
+  FlameIcon,
   HeartPulseIcon,
   MonitorIcon,
   RssIcon,
@@ -23,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-type ActivePage = "feeds" | "subscriptions" | "keywords" | "fetch" | "fetch_embedding" | "fetch_tag_extraction" | "fetch_ner" | "health" | "bookmarks"
+type ActivePage = "feeds" | "subscriptions" | "keywords" | "fetch" | "fetch_embedding" | "fetch_tag_extraction" | "fetch_ner" | "health" | "bookmarks" | "hot_topics"
 
 type NavItem = {
   key: ActivePage
@@ -76,6 +77,13 @@ export default function DashboardNav({
       href: "/dashboard/bookmarks",
       icon: <BookmarkCheckIcon className="size-3 text-amber-400" />,
       value: bookmarksCount ?? "↗",
+    },
+    {
+      key: "hot_topics",
+      label: "Hot Topics",
+      href: "/dashboard/hot_topics",
+      icon: <FlameIcon className="size-3 text-amber-400" />,
+      value: "🔥",
     },
   ]
 

@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     embedding_coordinator_interval: int = 90  # seconds (1.5 minutes)
     tag_extraction_coordinator_interval: int = 60  # seconds (1 minutes)
     ner_coordinator_interval: int = 90  # seconds (1.5 minute)
+    profile_coordinator_interval: int = 3600  # seconds (1 hour)
     log_level: str = "INFO"
 
     # Model names

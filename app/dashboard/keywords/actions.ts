@@ -8,11 +8,13 @@ import { createKeyword, deleteKeyword, updateKeyword } from "@/data/keywords";
 const CreateKeywordSchema = z.object({
   keyword: z.string().min(1, "Keyword is required").max(100),
   isCaseSensitive: z.boolean(),
+  source: z.enum(["manual", "tag"]).optional().default("manual"),
 });
 
 export async function createKeywordAction(params: {
   keyword: string;
   isCaseSensitive: boolean;
+  source?: "manual" | "tag";
 }) {
   const { userId } = await auth();
   if (!userId) return { error: "Unauthorized" };
@@ -20,10 +22,10 @@ export async function createKeywordAction(params: {
   const parsed = CreateKeywordSchema.safeParse(params);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const { keyword, isCaseSensitive } = parsed.data;
+  const { keyword, isCaseSensitive, source } = parsed.data;
 
   try {
-    await createKeyword(userId, keyword, isCaseSensitive);
+    await createKeyword(userId, keyword, isCaseSensitive, source);
   } catch {
     return { error: "Keyword already exists" };
   }

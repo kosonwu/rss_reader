@@ -119,7 +119,7 @@ function DatePicker({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="dark w-auto p-0 bg-[oklch(0.13_0_0)] border-white/15 shadow-xl shadow-black/50" align="start">
         <Calendar
           mode="single"
           selected={date}
@@ -250,11 +250,11 @@ export default function FetchEmbeddingLogsClient({
             <SelectTrigger className="h-9 min-w-[140px] font-mono text-xs border-white/15 bg-white/5 hover:bg-white/10 focus:ring-0 focus:ring-offset-0">
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="font-mono text-xs">All statuses</SelectItem>
-              <SelectItem value="success" className="font-mono text-xs">Success</SelectItem>
-              <SelectItem value="failed" className="font-mono text-xs">Failed</SelectItem>
-              <SelectItem value="skipped" className="font-mono text-xs">Skipped</SelectItem>
+            <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/15 shadow-xl shadow-black/50">
+              <SelectItem value="all" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">All statuses</SelectItem>
+              <SelectItem value="success" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">Success</SelectItem>
+              <SelectItem value="failed" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">Failed</SelectItem>
+              <SelectItem value="skipped" className="font-mono text-xs text-foreground focus:bg-white/8 focus:text-foreground">Skipped</SelectItem>
             </SelectContent>
           </Select>
         </div>

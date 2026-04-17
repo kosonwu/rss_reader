@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from collections import Counter
 
@@ -189,13 +190,39 @@ def _deduplicate_entities_by_similarity(
     return result
 
 
+_TRUNCATED_PREFIX_RE_CACHE: dict[str, re.Pattern] = {}
+
+
+def _restore_truncated_prefix(entity_text: str, source_text: str) -> str:
+    """Restore uppercase letters that CKIP's tokenizer stripped from the front of an entity.
+
+    CKIP splits ASCII abbreviations character-by-character (e.g. "SK" → "S" + "K"), so the
+    NER span often starts one letter too late.  Example: source has "SK 海力士" but CKIP
+    returns token.word = "K 海力士" because the "S" token was not included in the entity span.
+
+    Strategy: if the entity text appears in the source immediately preceded by one or more
+    uppercase ASCII letters, prepend those letters.  A word-boundary lookbehind (`(?<![A-Za-z])`)
+    prevents false matches inside the middle of a real word.
+    """
+    if not entity_text or not entity_text[0].isupper():
+        return entity_text
+    if entity_text not in _TRUNCATED_PREFIX_RE_CACHE:
+        _TRUNCATED_PREFIX_RE_CACHE[entity_text] = re.compile(
+            r'(?<![A-Za-z])([A-Z]+)' + re.escape(entity_text)
+        )
+    m = _TRUNCATED_PREFIX_RE_CACHE[entity_text].search(source_text)
+    if m and m.group(1):
+        return m.group(1) + entity_text
+    return entity_text
+
+
 def _run_ckip_ner_sync(texts: list[str]) -> list[list[dict]]:
     """Synchronous batch CKIP NER — runs in executor to avoid blocking the event loop.
     Returns a list of entity lists, one per input text, deduplicated by (text, type)."""
     ner = _get_ckip_ner()
     batch_results = ner(texts)  # List[List[NerToken]]
     out: list[list[dict]] = []
-    for result in batch_results:
+    for source_text, result in zip(texts, batch_results):
         seen: set[tuple[str, str]] = set()
         entities: list[dict] = []
         for token in result:
@@ -203,6 +230,10 @@ def _run_ckip_ner_sync(texts: list[str]) -> list[list[dict]]:
             text = clean_token(token.word)
             if not text:
                 continue
+            # CKIP splits ASCII abbreviations into individual characters; the NER span
+            # may therefore start one letter too late (e.g. "K 海力士" instead of "SK 海力士").
+            # Restore the missing uppercase prefix by looking back in the source text.
+            text = _restore_truncated_prefix(text, source_text)
             key = (text, label)
             if key not in seen:
                 seen.add(key)

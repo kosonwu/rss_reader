@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { HeaderAuth } from "./_components/header-auth";
+import { PreferenceSortToggle } from "./_components/preference-sort-toggle";
+import { SemanticSearchBar } from "./_components/semantic-search-bar";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -37,7 +39,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
-          <header className="fixed top-0 right-0 z-50 flex items-center gap-2.5 px-6 py-4">
+          <header className="fixed top-0 right-0 z-50 flex items-center gap-3 px-6 py-4">
+            <SemanticSearchBar />
+            <PreferenceSortToggle />
             <HeaderAuth />
           </header>
           {children}

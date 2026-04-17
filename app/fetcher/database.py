@@ -353,14 +353,16 @@ async def insert_tag_extraction_log(
 # ---------------------------------------------------------------------------
 
 async def count_unner_items() -> int:
-    """Return the total number of feed_items not yet NER-extracted."""
+    """Return the total number of feed_items that have tags but are not yet NER-extracted."""
     pool = get_pool()
-    row = await pool.fetchrow("SELECT COUNT(*) AS n FROM feed_items WHERE ner_extracted_at IS NULL")
+    row = await pool.fetchrow(
+        "SELECT COUNT(*) AS n FROM feed_items WHERE tags_extracted_at IS NOT NULL AND ner_extracted_at IS NULL"
+    )
     return int(row["n"])
 
 
 async def get_unner_items(limit: int) -> list[asyncpg.Record]:
-    """Return feed_items where ner_extracted_at IS NULL, oldest first.
+    """Return feed_items that have tags but ner_extracted_at IS NULL, oldest first.
     Includes the parent feed's language so the caller can route to CKIP or spaCy."""
     pool = get_pool()
     return await pool.fetch(
@@ -368,7 +370,8 @@ async def get_unner_items(limit: int) -> list[asyncpg.Record]:
         SELECT fi.id, fi.title, fi.content, f.language
         FROM   feed_items fi
         JOIN   feeds f ON f.id = fi.feed_id
-        WHERE  fi.ner_extracted_at IS NULL
+        WHERE  fi.tags_extracted_at IS NOT NULL
+          AND  fi.ner_extracted_at IS NULL
         ORDER  BY fi.fetched_at ASC
         LIMIT  $1
         """,
@@ -532,4 +535,59 @@ async def search_user_items(
         vector_str,
         user_id,
         limit,
+    )
+
+
+async def get_all_bookmark_user_ids() -> list[str]:
+    """Return all distinct user_ids that have at least one bookmark (active or soft-deleted)."""
+    pool = get_pool()
+    rows = await pool.fetch("SELECT DISTINCT user_id FROM user_bookmarks")
+    return [row["user_id"] for row in rows]
+
+
+async def get_user_bookmark_data(user_id: str) -> list[asyncpg.Record]:
+    """
+    Return ALL bookmarks for a user (active and soft-deleted) that have embeddings.
+    Includes embedding_content and display_tags_meta for profile computation.
+    embedding_content is cast to text so asyncpg doesn't raise a codec error for vector columns.
+    """
+    pool = get_pool()
+    return await pool.fetch(
+        """
+        SELECT
+            ub.bookmarked_at,
+            ub.removed_at,
+            fi.embedding_content::text  AS embedding_content,
+            fi.display_tags_meta        AS display_tags_meta
+        FROM   user_bookmarks ub
+        JOIN   feed_items fi ON fi.id = ub.feed_item_id
+        WHERE  ub.user_id = $1
+          AND  fi.embedding_content IS NOT NULL
+        """,
+        user_id,
+    )
+
+
+async def upsert_user_profile(
+    user_id: str,
+    taste_vector_json: str,
+    top_tags_json: str,
+    bookmark_count: int,
+) -> None:
+    """Upsert user_profiles row. Vectors and JSONB are passed as JSON strings with SQL casts."""
+    pool = get_pool()
+    await pool.execute(
+        """
+        INSERT INTO user_profiles (user_id, taste_vector, top_tags, bookmark_count, updated_at)
+        VALUES ($1, $2::vector, $3::jsonb, $4, now())
+        ON CONFLICT (user_id) DO UPDATE
+            SET taste_vector   = EXCLUDED.taste_vector,
+                top_tags       = EXCLUDED.top_tags,
+                bookmark_count = EXCLUDED.bookmark_count,
+                updated_at     = now()
+        """,
+        user_id,
+        taste_vector_json,
+        top_tags_json,
+        bookmark_count,
     )
