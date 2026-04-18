@@ -1,0 +1,1 @@
+ALTER TABLE "feed_items" ADD COLUMN "reading_time_minutes" integer DEFAULT 1 NOT NULL;

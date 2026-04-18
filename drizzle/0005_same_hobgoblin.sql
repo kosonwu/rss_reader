@@ -1,0 +1,1 @@
+ALTER TABLE "fetch_embedding_logs" ADD COLUMN "items_remaining_after" integer;

@@ -1,0 +1,2 @@
+ALTER TABLE "user_bookmarks" ADD COLUMN "removed_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "idx_user_bookmarks_active" ON "user_bookmarks" USING btree ("user_id") WHERE "user_bookmarks"."removed_at" IS NULL;
