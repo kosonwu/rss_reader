@@ -49,8 +49,8 @@ function buildConditions(userId: string, filters: FeedItemFilters) {
     eq(userSubscriptions.userId, userId),
     eq(userSubscriptions.isActive, true),
     sql`${feedItems.displayTagsUpdatedAt} IS NOT NULL`,
-    gte(feedItems.publishedAt, startOfDay(filters.dateFrom)),
-    lte(feedItems.publishedAt, endOfDay(filters.dateTo)),
+    gte(feedItems.fetchedAt, startOfDay(filters.dateFrom)),
+    lte(feedItems.fetchedAt, endOfDay(filters.dateTo)),
   ]
 
   if (filters.feedId) {
@@ -128,7 +128,7 @@ export async function getUserFeedItems(
       .orderBy(
         usePreferenceSort
           ? sql`${feedItems.embeddingContent} <=> ${JSON.stringify(filters.tasteVector)}::vector`
-          : desc(feedItems.publishedAt)
+          : desc(feedItems.fetchedAt)
       )
       .limit(pageSize)
       .offset(offset),

@@ -139,7 +139,7 @@ function AddDialog({
         setDisplayName("");
         setIsActive(true);
         onOpenChange(false);
-        toast.success("Subscribed");
+        toast.success(`Subscribed to '${displayName.trim() || selectedFeed?.title || selectedFeed?.url || feedId}'`);
       }
     });
   }
@@ -258,7 +258,7 @@ function EditDialog({
         toast.error(result.error);
       } else {
         onOpenChange(false);
-        toast.success("Subscription updated");
+        toast.success(`Updated '${displayName.trim() || subscription.feedTitle || subscription.feedUrl}'`);
       }
     });
   }
@@ -337,7 +337,7 @@ function SubscriptionTableRow({ subscription }: { subscription: Subscription }) 
   function handleUnsubscribe() {
     startTransition(async () => {
       await unsubscribeAction({ subscriptionId: subscription.id });
-      toast.success(`"${displayTitle}" removed`);
+      toast.success(`Removed '${displayTitle}'`);
     });
   }
 

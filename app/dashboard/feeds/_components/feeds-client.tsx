@@ -284,7 +284,7 @@ function AddDialog({
           language: "zh-TW",
         });
         onOpenChange(false);
-        toast.success("Feed added");
+        toast.success(`Saved '${fields.title.trim() || url}' as feed`);
       }
     });
   }
@@ -378,7 +378,7 @@ function EditDialog({
         toast.error(result.error);
       } else {
         onOpenChange(false);
-        toast.success("Feed updated");
+        toast.success(`Updated '${fields.title.trim() || feed.url}'`);
       }
     });
   }
@@ -430,7 +430,7 @@ function FeedTableRow({ feed }: { feed: Feed }) {
   function handleDelete() {
     startTransition(async () => {
       await removeFeedAction({ feedId: feed.id });
-      toast.success(`"${displayTitle}" removed`);
+      toast.success(`Removed '${displayTitle}'`);
     });
   }
 

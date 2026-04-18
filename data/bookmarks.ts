@@ -73,8 +73,8 @@ export async function bulkAddBookmarksByTag(
       and(
         eq(userSubscriptions.userId, userId),
         eq(userSubscriptions.isActive, true),
-        gte(feedItems.publishedAt, startOfDay(dateFrom)),
-        lte(feedItems.publishedAt, endOfDay(dateTo)),
+        gte(feedItems.fetchedAt, startOfDay(dateFrom)),
+        lte(feedItems.fetchedAt, endOfDay(dateTo)),
         sql`lower(${tag}) = ANY(SELECT lower(unnest(${feedItems.displayTags})))`
       )
     )

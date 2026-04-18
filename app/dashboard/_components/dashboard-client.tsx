@@ -127,14 +127,14 @@ const GRADIENT_PALETTE = [
 ]
 
 const BADGE_PALETTE = [
-  "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
-  "bg-orange-500/15 text-orange-400 border-orange-500/25",
-  "bg-red-500/15 text-red-400 border-red-500/25",
-  "bg-blue-500/15 text-blue-400 border-blue-500/25",
-  "bg-cyan-500/15 text-cyan-400 border-cyan-500/25",
-  "bg-violet-500/15 text-violet-400 border-violet-500/25",
-  "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/25",
-  "bg-amber-500/15 text-amber-400 border-amber-500/25",
+  "bg-emerald-950/80 text-emerald-300 border-emerald-500/45",
+  "bg-orange-950/80 text-orange-300 border-orange-500/45",
+  "bg-red-950/80 text-red-300 border-red-500/45",
+  "bg-blue-950/80 text-blue-300 border-blue-500/45",
+  "bg-cyan-950/80 text-cyan-300 border-cyan-500/45",
+  "bg-violet-950/80 text-violet-300 border-violet-500/45",
+  "bg-fuchsia-950/80 text-fuchsia-300 border-fuchsia-500/45",
+  "bg-amber-950/80 text-amber-300 border-amber-500/45",
 ]
 
 function feedStyle(feedIndex: number) {
@@ -554,9 +554,9 @@ export default function DashboardClient({
       if (result?.error) {
         toast.error(result.error)
       } else if (result?.count === 0) {
-        toast.info(`'${selectedTag}' 的文章已全部加入書籤`)
+        toast.info(`All '${selectedTag}' articles already bookmarked`)
       } else {
-        toast.success(`已將 ${result.count} 篇含有 '${selectedTag}' 的文章加入書籤`)
+        toast.success(`Bookmarked ${result.count} '${selectedTag}' articles`)
       }
     })
   }
@@ -920,6 +920,8 @@ export default function DashboardClient({
                       <div className={`w-full h-full bg-gradient-to-br ${gradient}`} />
                     )}
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_70%_20%,rgba(255,255,255,0.06),transparent)]" />
+                    {/* Bottom scrim — ensures badge legibility over any image */}
+                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/70 to-transparent pointer-events-none rounded-b-none" />
 
                     {/* Top-left: display tags */}
                     <div className="absolute top-2 left-2 right-10 flex items-start gap-1 flex-wrap">
@@ -969,7 +971,7 @@ export default function DashboardClient({
                     <div className="absolute bottom-2.5 left-3 flex flex-wrap items-center gap-1.5">
                       <Badge
                         className={cn(
-                          "text-[9px] font-mono border px-1.5 py-0.5 rounded cursor-pointer transition-all duration-150",
+                          "text-[9px] font-mono border px-1.5 py-0.5 rounded cursor-pointer transition-all duration-150 backdrop-blur-sm",
                           selectedFeed === item.feedId
                             ? `${badge} ring-1 ring-white/30 brightness-125`
                             : `${badge} hover:brightness-125`

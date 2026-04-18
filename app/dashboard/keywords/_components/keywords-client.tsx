@@ -85,7 +85,7 @@ function EditDialog({
         toast.error(result.error);
       } else {
         onOpenChange(false);
-        toast.success("Keyword updated");
+        toast.success(`Updated '${value}'`);
       }
     });
   }
@@ -226,7 +226,7 @@ function KeywordTableRow({ keyword }: { keyword: Keyword }) {
   function handleDelete() {
     startTransition(async () => {
       await deleteKeywordAction({ keywordId: keyword.id });
-      toast.success(`"${keyword.keyword}" deleted`);
+      toast.success(`Deleted '${keyword.keyword}'`);
     });
   }
 
