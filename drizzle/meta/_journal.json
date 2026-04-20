@@ -1,0 +1,104 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775832620881,
+      "tag": "0000_redundant_daimon_hellstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775914540066,
+      "tag": "0001_clear_kinsey_walden",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775955489786,
+      "tag": "0002_steady_the_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775989439275,
+      "tag": "0003_add_vector_embeddings",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776044774924,
+      "tag": "0004_abandoned_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776046683945,
+      "tag": "0005_same_hobgoblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776077012189,
+      "tag": "0006_cold_pixie",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776077526490,
+      "tag": "0007_amused_ironclad",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776150861939,
+      "tag": "0008_brown_outlaw_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776178179647,
+      "tag": "0009_third_microchip",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776235526374,
+      "tag": "0010_material_deadpool",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776320400478,
+      "tag": "0011_charming_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776336999001,
+      "tag": "0012_tricky_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776339732148,
+      "tag": "0013_far_richard_fisk",
+      "breakpoints": true
+    }
+  ]
+}
