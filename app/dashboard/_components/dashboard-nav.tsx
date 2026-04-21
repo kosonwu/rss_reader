@@ -23,6 +23,95 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import type { FeedStatusCounts } from "@/data/feeds"
+import { Cell, Pie, PieChart } from "recharts"
+
+// ── Feed Status Gauge ──────────────────────────────────────────────────────────
+
+function FeedStatusGauge({ counts }: { counts: FeedStatusCounts }) {
+  const { active, error, pending, paused, total } = counts
+
+  const nonActive = total - active
+  const hasError  = error > 0
+  const numColor  = nonActive === 0 ? "#10b981" : hasError ? "#f43f5e" : "#f59e0b"
+
+  // Each segment with explicit colour; filter zeros so they don't split the arc
+  const segments = [
+    { name: "active",  value: active,  color: "#10b981" },
+    { name: "pending", value: pending, color: "#f59e0b" },
+    { name: "paused",  value: paused,  color: "#2d3f52" },
+    { name: "error",   value: error,   color: "#f43f5e" },
+  ].filter(s => s.value > 0)
+
+  // Fallback when no data yet
+  const pieData = segments.length > 0
+    ? segments
+    : [{ name: "empty", value: 1, color: "rgba(255,255,255,0.06)" }]
+
+  const tooltip = [
+    `Active: ${active} / ${total}`,
+    pending ? `Pending: ${pending}` : "",
+    paused  ? `Paused: ${paused}`   : "",
+    error   ? `Error: ${error}`     : "",
+  ].filter(Boolean).join("\n")
+
+  // Container: 80 × 46 px; arc centre sits at bottom (cy=42) so only the
+  // top semi-circle is visible, giving a clean speedometer shape.
+  return (
+    <div
+      title={tooltip}
+      className={cn(
+        "flex flex-col items-center gap-0 px-3 py-2 rounded-lg border bg-white/4",
+        hasError ? "border-rose-500/30" : "border-white/8"
+      )}
+    >
+      {/* Count above the arc */}
+      <div className="flex items-baseline gap-0.5 leading-none mb-1">
+        <span style={{
+          color: numColor,
+          fontSize: 14,
+          fontWeight: 300,
+          fontFamily: "ui-monospace,SFMono-Regular,monospace",
+        }}>
+          {nonActive}
+        </span>
+        <span style={{
+          color: "rgba(255,255,255,0.28)",
+          fontSize: 6.5,
+          fontFamily: "ui-monospace,SFMono-Regular,monospace",
+        }}>
+          /{total}
+        </span>
+      </div>
+
+      {/* Half-donut: startAngle=180 (left) → endAngle=0 (right) through top */}
+      <div style={{ width: 76, height: 40, display: "flex", justifyContent: "center" }}>
+        <PieChart width={76} height={40} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+          <Pie
+            data={pieData}
+            cx={38}
+            cy={38}
+            startAngle={180}
+            endAngle={0}
+            innerRadius={21}
+            outerRadius={36}
+            dataKey="value"
+            strokeWidth={0}
+            paddingAngle={0}
+            isAnimationActive={false}
+          >
+            {pieData.map(entry => (
+              <Cell key={entry.name} fill={entry.color} />
+            ))}
+          </Pie>
+        </PieChart>
+      </div>
+    </div>
+  )
+}
+
+// ── Nav ────────────────────────────────────────────────────────────────────────
 
 type ActivePage = "feeds" | "subscriptions" | "keywords" | "fetch" | "fetch_embedding" | "fetch_tag_extraction" | "fetch_ner" | "health" | "bookmarks" | "hot_topics"
 
@@ -42,12 +131,14 @@ export default function DashboardNav({
   keywordsCount,
   bookmarksCount,
   activePage,
+  feedsStatusCounts,
 }: {
   feedsCount: number
   subscriptionsCount: number
   keywordsCount: number
   bookmarksCount?: number
   activePage?: ActivePage
+  feedsStatusCounts?: FeedStatusCounts
 }) {
   const items: NavItem[] = [
     {
@@ -201,6 +292,7 @@ export default function DashboardNav({
         )
       })}
       {monitorDropdown}
+      {feedsStatusCounts && <FeedStatusGauge counts={feedsStatusCounts} />}
     </div>
   )
 }

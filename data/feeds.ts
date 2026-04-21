@@ -32,6 +32,7 @@ export async function getAllFeedsDetailed() {
       lastFetchedAt: feeds.lastFetchedAt,
       lastFetchError: feeds.lastFetchError,
       language: feeds.language,
+      userId: feeds.userId,
       createdAt: feeds.createdAt,
     })
     .from(feeds)
@@ -43,6 +44,29 @@ export async function getAllFeedsCount(): Promise<number> {
   return row?.count ?? 0
 }
 
+export type FeedStatusCounts = {
+  active: number
+  error: number
+  pending: number
+  paused: number
+  total: number
+}
+
+export async function getAllFeedsStatusCounts(): Promise<FeedStatusCounts> {
+  const rows = await db
+    .select({ status: feeds.fetchStatus, count: count() })
+    .from(feeds)
+    .groupBy(feeds.fetchStatus)
+
+  const result: FeedStatusCounts = { active: 0, error: 0, pending: 0, paused: 0, total: 0 }
+  for (const row of rows) {
+    const n = Number(row.count)
+    result[row.status] += n
+    result.total += n
+  }
+  return result
+}
+
 export type FeedFields = {
   title: string | null;
   description: string | null;
@@ -52,10 +76,10 @@ export type FeedFields = {
   language: "en" | "zh-TW" | null;
 };
 
-export async function addFeed(url: string, fields: FeedFields) {
+export async function addFeed(url: string, fields: FeedFields, userId?: string) {
   const [inserted] = await db
     .insert(feeds)
-    .values({ url, ...fields })
+    .values({ url, ...fields, userId: userId ?? null })
     .onConflictDoNothing()
     .returning({ id: feeds.id });
 

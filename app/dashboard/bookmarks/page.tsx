@@ -29,7 +29,7 @@ export default async function BookmarksPage() {
     readingTimeMinutes: item.readingTimeMinutes,
   }));
 
-  const topTags = (userProfile?.topTags ?? []).slice(0, 8);
+  const topTags = (userProfile?.topTags ?? []).slice(0, 10);
 
   return (
     <BookmarksClient

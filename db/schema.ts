@@ -92,6 +92,7 @@ export const feeds = pgTable(
         lastFetchedAt: timestamp("last_fetched_at", { withTimezone: true }),
         lastFetchError: text("last_fetch_error"),
         language: feedLanguageEnum("language"),
+        userId: text("user_id"),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
     },

@@ -69,6 +69,7 @@ import {
   PaginationItem,
 } from "@/components/ui/pagination"
 import DashboardNav from "@/app/dashboard/_components/dashboard-nav"
+import type { FeedStatusCounts } from "@/data/feeds"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -333,6 +334,7 @@ function DatePicker({
 export default function DashboardClient({
   feeds,
   feedsCount,
+  feedsStatusCounts,
   feedItems,
   keywords,
   subscriptionsCount,
@@ -352,6 +354,7 @@ export default function DashboardClient({
 }: {
   feeds: Feed[]
   feedsCount: number
+  feedsStatusCounts: FeedStatusCounts
   feedItems: FeedItem[]
   keywords: Keyword[]
   subscriptionsCount: number
@@ -680,6 +683,7 @@ export default function DashboardClient({
           <div className="flex items-end gap-6 shrink-0">
             <DashboardNav
               feedsCount={feedsCount}
+              feedsStatusCounts={feedsStatusCounts}
               subscriptionsCount={subscriptionsCount}
               keywordsCount={keywords.length}
               bookmarksCount={bookmarksCount}
@@ -703,8 +707,10 @@ export default function DashboardClient({
       </div>
 
       {/* ── Filter bar ── */}
-      <div className="sticky top-0 z-20 border-b border-white/8 bg-[oklch(0.09_0_0)]/92 backdrop-blur-xl px-6 py-3 lg:px-10">
-        <div className="max-w-7xl mx-auto flex items-center gap-2.5 flex-wrap">
+      <div className="sticky top-0 z-20 border-b border-white/8 bg-[oklch(0.09_0_0)]/92 backdrop-blur-xl px-6 lg:px-10">
+
+        {/* Row 1: main filters — never wraps, never shifts */}
+        <div className="max-w-7xl mx-auto flex items-center gap-2.5 py-3">
           <FilterIcon className="size-3.5 text-muted-foreground shrink-0 mr-0.5" />
 
           <DatePicker
@@ -737,61 +743,6 @@ export default function DashboardClient({
             value={selectedKeyword}
             onChange={(keyword) => updateUrl({ keyword })}
           />
-
-          {/* Active tag filter chip */}
-          {selectedTag && (
-            <div className="flex items-center h-9 gap-0 rounded-md border bg-violet-500/15 border-violet-400/30 px-2.5 font-mono text-xs text-violet-300">
-              {/* Bulk bookmark all articles with this tag */}
-              <button
-                type="button"
-                disabled={isBulkBookmarking}
-                onClick={handleBulkBookmarkByTag}
-                title={`Bookmark all articles tagged '${selectedTag}'`}
-                aria-label={`Bookmark all articles tagged '${selectedTag}'`}
-                className="shrink-0 rounded p-0.5 mr-1 text-violet-400 hover:text-violet-200 hover:bg-violet-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isBulkBookmarking
-                  ? <Loader2Icon className="size-3 animate-spin" />
-                  : <BookmarkIcon className="size-3" />
-                }
-              </button>
-              <span className="mr-1.5">{selectedTag}</span>
-
-              {/* Save as keyword */}
-              <button
-                type="button"
-                disabled={isTagAlreadySaved || isSavingTag}
-                onClick={handleSaveTagAsKeyword}
-                title={isTagAlreadySaved ? `'${selectedTag}' already saved as keyword` : `Save '${selectedTag}' as keyword`}
-                aria-label={
-                  isTagAlreadySaved
-                    ? `'${selectedTag}' already saved as keyword`
-                    : `Save '${selectedTag}' as keyword`
-                }
-                className={cn(
-                  "shrink-0 rounded p-0.5 transition-colors",
-                  isTagAlreadySaved
-                    ? "text-violet-400 opacity-60 cursor-default"
-                    : "text-violet-400 hover:text-violet-200 hover:bg-violet-500/25"
-                )}
-              >
-                {isTagAlreadySaved
-                  ? <CheckIcon className="size-3" />
-                  : <TagIcon className="size-3" />
-                }
-              </button>
-
-              {/* Clear filter */}
-              <button
-                type="button"
-                onClick={() => updateUrl({ tag: null })}
-                aria-label="Clear tag filter"
-                className="shrink-0 rounded p-0.5 ml-0.5 text-violet-400 opacity-60 hover:opacity-100 hover:text-violet-200 hover:bg-violet-500/25 transition-colors"
-              >
-                <XIcon className="size-3" />
-              </button>
-            </div>
-          )}
 
           {/* ── Right side: Semantic Search + Smart Sort ── */}
           <div className="ml-auto flex items-center gap-3 shrink-0">
@@ -849,6 +800,62 @@ export default function DashboardClient({
             </div>
           </div>
         </div>
+
+        {/* Row 2: active tag chip — own row, only visible when a tag is selected */}
+        {selectedTag && (
+          <div className="border-t border-white/6 max-w-7xl mx-auto flex items-center gap-2.5 py-1.5">
+            <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white/30 shrink-0">Tag</span>
+            <div className="flex items-center h-7 gap-0 rounded-md border bg-violet-500/15 border-violet-400/30 px-2 font-mono text-xs text-violet-300">
+              {/* Bulk bookmark all articles with this tag */}
+              <button
+                type="button"
+                disabled={isBulkBookmarking}
+                onClick={handleBulkBookmarkByTag}
+                title={`Bookmark all articles tagged '${selectedTag}'`}
+                aria-label={`Bookmark all articles tagged '${selectedTag}'`}
+                className="shrink-0 rounded p-0.5 mr-1 text-violet-400 hover:text-violet-200 hover:bg-violet-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isBulkBookmarking
+                  ? <Loader2Icon className="size-3 animate-spin" />
+                  : <BookmarkIcon className="size-3" />
+                }
+              </button>
+              <span className="mr-1.5">{selectedTag}</span>
+
+              {/* Save as keyword */}
+              <button
+                type="button"
+                disabled={isTagAlreadySaved || isSavingTag}
+                onClick={handleSaveTagAsKeyword}
+                title={isTagAlreadySaved ? `'${selectedTag}' already saved as keyword` : `Save '${selectedTag}' as keyword`}
+                aria-label={isTagAlreadySaved ? `'${selectedTag}' already saved as keyword` : `Save '${selectedTag}' as keyword`}
+                className={cn(
+                  "shrink-0 rounded p-0.5 transition-colors",
+                  isTagAlreadySaved
+                    ? "text-violet-400 opacity-60 cursor-default"
+                    : "text-violet-400 hover:text-violet-200 hover:bg-violet-500/25"
+                )}
+              >
+                {isSavingTag
+                  ? <Loader2Icon className="size-3 animate-spin" />
+                  : isTagAlreadySaved
+                    ? <CheckIcon className="size-3" />
+                    : <TagIcon className="size-3" />
+                }
+              </button>
+
+              {/* Clear filter */}
+              <button
+                type="button"
+                onClick={() => updateUrl({ tag: null })}
+                aria-label="Clear tag filter"
+                className="shrink-0 rounded p-0.5 ml-0.5 text-violet-400 opacity-60 hover:opacity-100 hover:text-violet-200 hover:bg-violet-500/25 transition-colors"
+              >
+                <XIcon className="size-3" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Article grid ── */}
@@ -928,6 +935,7 @@ export default function DashboardClient({
                       {item.displayTags?.slice().sort((a, b) => a.length - b.length).slice(0, 5).map((tag) => (
                         <Badge
                           key={tag}
+                          title={`View articles tagged "${tag}"`}
                           className={cn(
                             "text-[9px] font-mono px-1.5 py-0.5 rounded backdrop-blur-sm cursor-pointer transition-all duration-150",
                             selectedTag?.toLowerCase() === tag.toLowerCase()
@@ -970,6 +978,7 @@ export default function DashboardClient({
                     {/* Bottom-left: feed badge + keyword badges + read badge */}
                     <div className="absolute bottom-2.5 left-3 flex flex-wrap items-center gap-1.5">
                       <Badge
+                        title={`View articles from '${feedName}'`}
                         className={cn(
                           "text-[9px] font-mono border px-1.5 py-0.5 rounded cursor-pointer transition-all duration-150 backdrop-blur-sm",
                           selectedFeed === item.feedId
@@ -986,6 +995,7 @@ export default function DashboardClient({
                       {matchedKeywords.map((kw) => (
                         <Badge
                           key={kw}
+                          title={`View articles containing keyword "${kw}"`}
                           className={cn(
                             "text-[9px] font-mono border px-1.5 py-0.5 rounded cursor-pointer transition-all duration-150",
                             selectedKeyword === kw

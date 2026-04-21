@@ -30,6 +30,7 @@ export default async function FeedsPage() {
       subscriptionsCount={subscriptionsCount}
       keywordsCount={keywords.length}
       bookmarksCount={bookmarksCount}
+      currentUserId={userId}
     />
   );
 }

@@ -3,6 +3,9 @@
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { db } from "@/db";
+import { feeds } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { addFeed, removeFeed, updateFeed } from "@/data/feeds";
 
 const uuidFormat = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
@@ -44,7 +47,7 @@ export async function addFeedAction(params: {
   const siteUrl = fields.siteUrl === "" ? null : fields.siteUrl;
 
   try {
-    await addFeed(url, { ...fields, siteUrl });
+    await addFeed(url, { ...fields, siteUrl }, userId);
   } catch {
     return { error: "Failed to add feed" };
   }
@@ -62,6 +65,9 @@ export async function removeFeedAction(params: { feedId: string }) {
 
   const parsed = RemoveFeedSchema.safeParse(params);
   if (!parsed.success) return { error: "Invalid input" };
+
+  const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, parsed.data.feedId) });
+  if (!feed || feed.userId !== userId) return { error: "Forbidden" };
 
   await removeFeed(parsed.data.feedId);
   revalidatePath("/dashboard/feeds");
@@ -88,6 +94,9 @@ export async function updateFeedAction(params: {
 
   const { feedId, siteUrl, ...rest } = parsed.data;
   const normalisedSiteUrl = siteUrl === "" ? null : siteUrl;
+
+  const feed = await db.query.feeds.findFirst({ where: eq(feeds.id, feedId) });
+  if (!feed || (feed.userId !== null && feed.userId !== userId)) return { error: "Forbidden" };
 
   try {
     await updateFeed(feedId, { ...rest, siteUrl: normalisedSiteUrl });

@@ -81,6 +81,7 @@ type Feed = {
   lastFetchedAt: string | null;
   lastFetchError: string | null;
   language: FeedLanguage | null;
+  userId: string | null;
   createdAt: string;
 };
 
@@ -420,12 +421,14 @@ function EditDialog({
 
 // ── Feed Table Row ────────────────────────────────────────────────────────────
 
-function FeedTableRow({ feed }: { feed: Feed }) {
+function FeedTableRow({ feed, currentUserId }: { feed: Feed; currentUserId: string }) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const displayTitle = feed.title ?? feed.url;
   const status = statusConfig[feed.fetchStatus];
+  const canEdit = feed.userId === null || feed.userId === currentUserId;
+  const canDelete = feed.userId === currentUserId;
 
   function handleDelete() {
     startTransition(async () => {
@@ -487,48 +490,52 @@ function FeedTableRow({ feed }: { feed: Feed }) {
               </Button>
             )}
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
-              onClick={() => setEditOpen(true)}
-              aria-label={`Edit ${displayTitle}`}
-            >
-              <PencilIcon className="size-3.5" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+                onClick={() => setEditOpen(true)}
+                aria-label={`Edit ${displayTitle}`}
+              >
+                <PencilIcon className="size-3.5" />
+              </Button>
+            )}
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
-                  disabled={isPending}
-                  aria-label={`Remove ${displayTitle}`}
-                >
-                  <Trash2Icon className="size-3.5" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
-                    Remove feed?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-muted-foreground">
-                    <span className="font-mono text-amber-400">&ldquo;{displayTitle}&rdquo;</span>{" "}
-                    will be removed from your subscriptions.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-red-600 text-white hover:bg-red-500">
-                    Remove
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {canDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                    disabled={isPending}
+                    aria-label={`Remove ${displayTitle}`}
+                  >
+                    <Trash2Icon className="size-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
+                      Remove feed?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-muted-foreground">
+                      <span className="font-mono text-amber-400">&ldquo;{displayTitle}&rdquo;</span>{" "}
+                      and all its articles will be permanently removed.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 text-white hover:bg-red-500">
+                      Remove
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </TableCell>
       </TableRow>
@@ -549,12 +556,14 @@ export default function FeedsClient({
   subscriptionsCount,
   keywordsCount,
   bookmarksCount,
+  currentUserId,
 }: {
   feeds: Feed[];
   feedsCount: number;
   subscriptionsCount: number;
   keywordsCount: number;
   bookmarksCount: number;
+  currentUserId: string;
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [titleFilter, setTitleFilter] = useState("");
@@ -732,7 +741,7 @@ export default function FeedsClient({
                 </TableHeader>
                 <TableBody>
                   {pagedFeeds.map((feed) => (
-                    <FeedTableRow key={feed.id} feed={feed} />
+                    <FeedTableRow key={feed.id} feed={feed} currentUserId={currentUserId} />
                   ))}
                 </TableBody>
               </Table>

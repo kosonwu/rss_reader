@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { format, isValid, parseISO, startOfDay } from "date-fns"
-import { getUserFeeds } from "@/data/feeds"
-import { getAllFeedsCount } from "@/data/feeds"
+import { getUserFeeds, getAllFeedsCount, getAllFeedsStatusCounts } from "@/data/feeds"
+import type { FeedStatusCounts } from "@/data/feeds"
 import { getUserFeedItems, PAGE_SIZE } from "@/data/feed-items"
 import { getUserKeywords } from "@/data/keywords"
 import { getSubscriptionsCount } from "@/data/subscriptions"
@@ -40,9 +40,10 @@ export default async function DashboardPage({
   const searchQuery  = typeof params.q === "string" ? params.q.trim() : ""
 
   // Fetch metadata (always needed for filter dropdowns)
-  const [feeds, feedsCount, keywords, subscriptionsCount, bookmarksCount, userProfile] = await Promise.all([
+  const [feeds, feedsCount, feedsStatusCounts, keywords, subscriptionsCount, bookmarksCount, userProfile] = await Promise.all([
     getUserFeeds(userId),
     getAllFeedsCount(),
+    getAllFeedsStatusCounts(),
     getUserKeywords(userId),
     getSubscriptionsCount(userId),
     getUserBookmarksCount(userId),
@@ -85,6 +86,7 @@ export default async function DashboardPage({
     <DashboardClient
       feeds={feeds}
       feedsCount={feedsCount}
+      feedsStatusCounts={feedsStatusCounts}
       keywords={keywords}
       subscriptionsCount={subscriptionsCount}
       bookmarksCount={bookmarksCount}
