@@ -2,6 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
+preDeploy = "npx drizzle-kit migrate"
 startCommand = "npm run start -- -p $PORT"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
