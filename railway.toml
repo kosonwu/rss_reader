@@ -1,5 +1,6 @@
 [build]
 builder = "RAILPACK"
+buildCommand = "npm ci && npm run build"
 
 [deploy]
 preDeploy = "npx drizzle-kit migrate"
