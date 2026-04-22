@@ -39,7 +39,7 @@ This project has two services:
 
 **Stack:**
 - **Framework:** Next.js 16 with App Router (`app/` directory)
-- **Auth:** Clerk (`@clerk/nextjs`) — `ClerkProvider` wraps the app in `app/layout.tsx`; auth state drives `Show when="signed-in/out"` in the header
+- **Auth:** Clerk (`@clerk/nextjs`) — `ClerkProvider` wraps the app in `app/layout.tsx`; auth state drives `Show when="signed-in/out"` in the header; Clerk proxy config lives in `proxy.ts` (Next.js proxy convention, replaces deprecated `middleware.ts`)
 - **Database:** Neon (serverless PostgreSQL) via `@neondatabase/serverless`, accessed through Drizzle ORM
 - **ORM:** Drizzle — schema defined in `db/schema.ts`, client singleton exported from `db/index.ts`
 - **UI:** Tailwind CSS v4 + shadcn/ui (`radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`)

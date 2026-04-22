@@ -105,3 +105,12 @@ export async function updateFeed(feedId: string, fields: FeedFields) {
 
   if (!updated) throw new Error("Feed not found");
 }
+
+export async function activateErrorFeeds(): Promise<number> {
+  const updated = await db
+    .update(feeds)
+    .set({ fetchStatus: "active" })
+    .where(eq(feeds.fetchStatus, "error"))
+    .returning({ id: feeds.id });
+  return updated.length;
+}

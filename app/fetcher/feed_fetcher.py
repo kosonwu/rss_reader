@@ -84,7 +84,7 @@ async def fetch_feed(feed_id: str, feed_url: str) -> None:
 
     except Exception as exc:
         duration_ms = int((time.monotonic() - start) * 1000)
-        error_str = str(exc)
+        error_str = str(exc) or repr(exc)
         logger.warning("feed=%s url=%s error=%s", feed_id, feed_url, error_str)
         await database.update_feed_error(feed_id, error_str)
         await database.insert_fetch_log(

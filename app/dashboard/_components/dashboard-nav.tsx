@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import {
   ActivityIcon,
   ArrowUpRightIcon,
@@ -131,7 +132,7 @@ export default function DashboardNav({
   keywordsCount,
   bookmarksCount,
   activePage,
-  feedsStatusCounts,
+  feedsStatusCounts: initialStatusCounts,
 }: {
   feedsCount: number
   subscriptionsCount: number
@@ -140,6 +141,20 @@ export default function DashboardNav({
   activePage?: ActivePage
   feedsStatusCounts?: FeedStatusCounts
 }) {
+  const [feedsStatusCounts, setFeedsStatusCounts] = useState<FeedStatusCounts | undefined>(initialStatusCounts)
+
+  useEffect(() => {
+    if (!initialStatusCounts) return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/feed-status-counts")
+        if (res.ok) setFeedsStatusCounts(await res.json())
+      } catch {
+        // silently skip on network error
+      }
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [initialStatusCounts])
   const items: NavItem[] = [
     {
       key: "feeds",

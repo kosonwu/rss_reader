@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { feeds } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { addFeed, removeFeed, updateFeed } from "@/data/feeds";
+import { addFeed, removeFeed, updateFeed, activateErrorFeeds } from "@/data/feeds";
 
 const uuidFormat = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
 
@@ -105,4 +105,18 @@ export async function updateFeedAction(params: {
   }
 
   revalidatePath("/dashboard/feeds");
+}
+
+export async function activateErrorFeedsAction() {
+  const { userId } = await auth();
+  if (!userId) return { error: "Unauthorized" };
+
+  try {
+    const count = await activateErrorFeeds();
+    revalidatePath("/dashboard/feeds");
+    revalidatePath("/dashboard");
+    return { count };
+  } catch {
+    return { error: "Failed to activate feeds" };
+  }
 }

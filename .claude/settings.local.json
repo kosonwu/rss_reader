@@ -29,7 +29,12 @@
       "Bash(pip show *)",
       "Bash(uv run *)",
       "Bash(python -c \"import en_core_web_sm; import os; print\\(os.path.dirname\\(en_core_web_sm.__file__\\)\\)\")",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "WebFetch(domain:railpack.com)",
+      "WebSearch",
+      "WebFetch(domain:docs.railway.com)",
+      "Bash(xargs ls *)",
+      "WebFetch(domain:distill-fetch.up.railway.app)"
     ]
   },
   "enabledMcpjsonServers": [

@@ -420,6 +420,7 @@ export default function DashboardClient({
   // Semantic search state — query driven by URL ?q= prop
   const [searchItems, setSearchItems] = useState<FeedItem[] | null>(null)
   const [isSearching, setIsSearching] = useState<boolean>(false)
+  const [searchError, setSearchError] = useState(false)
 
   useEffect(() => {
     if (!searchQuery) { setSearchItems(null); return }
@@ -505,7 +506,8 @@ export default function DashboardClient({
     setIsSearching(true)
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-      if (!res.ok) { setSearchItems([]); return }
+      if (!res.ok) { setSearchError(true); setSearchItems(null); return }
+      setSearchError(false)
       const items: FeedItem[] = await res.json()
       setSearchItems(items)
       const newRead = items.filter((i) => i.isRead).map((i) => i.id)
@@ -599,6 +601,7 @@ export default function DashboardClient({
 
   function clearSearch() {
     setSearchInputValue("")
+    setSearchError(false)
     commitSearch("")
   }
 
@@ -888,7 +891,7 @@ export default function DashboardClient({
           <div className="flex flex-col items-center justify-center py-32 text-muted-foreground gap-4">
             <NewspaperIcon className="size-14 opacity-10" />
             <p className="font-mono text-sm">
-              {isSearchMode ? "No semantic matches found." : "No articles match your current filters."}
+              {searchError ? "Search service unavailable. Please try again later." : isSearchMode ? "No semantic matches found." : "No articles match your current filters."}
             </p>
             {!isSearchMode && (
               <Button

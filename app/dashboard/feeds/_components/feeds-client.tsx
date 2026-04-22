@@ -12,6 +12,8 @@ import {
   ArrowLeftIcon,
   ExternalLinkIcon,
   SearchIcon,
+  ZapIcon,
+  Loader2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -62,7 +64,8 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { addFeedAction, removeFeedAction, updateFeedAction } from "../actions";
+import { Separator } from "@/components/ui/separator";
+import { addFeedAction, removeFeedAction, updateFeedAction, activateErrorFeedsAction } from "../actions";
 
 const PAGE_SIZE = 10;
 
@@ -570,6 +573,8 @@ export default function FeedsClient({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [languageFilter, setLanguageFilter] = useState<LanguageFilter>("all");
   const [page, setPage] = useState(1);
+  const [isActivating, startActivateTransition] = useTransition();
+  const errorCount = feeds.filter((f) => f.fetchStatus === "error").length;
 
   const filteredFeeds = feeds.filter((feed) => {
     const haystack = (feed.title ?? feed.url).toLowerCase();
@@ -596,6 +601,19 @@ export default function FeedsClient({
   function handleLanguageFilterChange(v: string) {
     setLanguageFilter(v as LanguageFilter);
     setPage(1);
+  }
+
+  function handleActivateErrors() {
+    startActivateTransition(async () => {
+      const result = await activateErrorFeedsAction();
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(
+          result.count === 1 ? "1 feed activated" : `${result.count} feeds activated`
+        );
+      }
+    });
   }
 
   return (
@@ -691,6 +709,54 @@ export default function FeedsClient({
                 ))}
               </SelectContent>
             </Select>
+
+            {errorCount > 0 && (
+              <>
+                <Separator orientation="vertical" className="h-6 bg-white/10" />
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isActivating}
+                      className="h-8 gap-1.5 font-mono text-xs border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    >
+                      {isActivating
+                        ? <Loader2Icon className="size-3.5 animate-spin" />
+                        : <ZapIcon className="size-3.5" />
+                      }
+                      Retry Errors ({errorCount})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="font-[family-name:var(--font-playfair)]">
+                        Retry error feeds?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-muted-foreground font-mono text-sm">
+                        This will set{" "}
+                        <span className="text-rose-400">{errorCount}</span>{" "}
+                        {errorCount === 1 ? "feed" : "feeds"} from{" "}
+                        <span className="text-rose-400">error</span> to{" "}
+                        <span className="text-emerald-400">active</span>.
+                        The fetcher will pick them up on its next run.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-white/15 bg-white/5 hover:bg-white/10 text-foreground">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleActivateErrors}
+                        className="bg-amber-500 text-black hover:bg-amber-400"
+                      >
+                        Retry all errors
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
           </div>
         </div>
       )}
