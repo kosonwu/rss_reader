@@ -4,6 +4,6 @@ builder = "NIXPACKS"
 [deploy]
 preDeploy = "npx drizzle-kit migrate"
 startCommand = "npm run start -- -p $PORT"
-healthcheckPath = "/api/health"
+healthcheckPath = "/api/ping"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
