@@ -11,6 +11,7 @@ import logging
 import re
 import time
 from collections import Counter
+from functools import lru_cache
 
 import numpy as np
 from ckip_transformers.nlp import CkipNerChunker
@@ -190,7 +191,9 @@ def _deduplicate_entities_by_similarity(
     return result
 
 
-_TRUNCATED_PREFIX_RE_CACHE: dict[str, re.Pattern] = {}
+@lru_cache(maxsize=512)
+def _compile_prefix_pattern(entity_text: str) -> re.Pattern:
+    return re.compile(r'(?<![A-Za-z])([A-Z]+)' + re.escape(entity_text))
 
 
 def _restore_truncated_prefix(entity_text: str, source_text: str) -> str:
@@ -206,11 +209,7 @@ def _restore_truncated_prefix(entity_text: str, source_text: str) -> str:
     """
     if not entity_text or not entity_text[0].isupper():
         return entity_text
-    if entity_text not in _TRUNCATED_PREFIX_RE_CACHE:
-        _TRUNCATED_PREFIX_RE_CACHE[entity_text] = re.compile(
-            r'(?<![A-Za-z])([A-Z]+)' + re.escape(entity_text)
-        )
-    m = _TRUNCATED_PREFIX_RE_CACHE[entity_text].search(source_text)
+    m = _compile_prefix_pattern(entity_text).search(source_text)
     if m and m.group(1):
         return m.group(1) + entity_text
     return entity_text

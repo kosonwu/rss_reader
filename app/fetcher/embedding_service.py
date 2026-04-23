@@ -103,13 +103,11 @@ async def _process_batch() -> dict:
         for row in to_embed
     ]
 
-    # Step 4: batch encode (run in executor — CPU-bound)
+    # Step 4: batch encode (run in executor — CPU-bound; sequential to halve peak memory)
     model = _get_model()
     loop = asyncio.get_event_loop()
-    title_vecs, content_vecs = await asyncio.gather(
-        loop.run_in_executor(None, partial(_encode, model, title_texts)),
-        loop.run_in_executor(None, partial(_encode, model, content_texts)),
-    )
+    title_vecs = await loop.run_in_executor(None, partial(_encode, model, title_texts))
+    content_vecs = await loop.run_in_executor(None, partial(_encode, model, content_texts))
 
     # Step 5: write vectors to DB
     for row, title_vec, content_vec in zip(to_embed, title_vecs, content_vecs):
