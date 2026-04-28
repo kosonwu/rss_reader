@@ -131,10 +131,13 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
 
     description = entry.get("summary")
 
+    # Try to extract image from RSS entry metadata (no HTTP request)
+    rss_image_url = _extract_image_from_entry(entry)
+
     # --- 4-step content extraction pipeline ---
-    og_image_url: str | None = None
     content: str | None = None
     content_source: str = "summary_only"
+    og_image_url: str | None = None
 
     # Step 1: RSS full content — use if any text present
     if entry.get("content"):
@@ -146,7 +149,9 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
 
     # Fetch article page once — reused for OG image + trafilatura
     if url:
-        og_image_url, page_html = await _fetch_article_page(url)
+        page_og_image, page_html = await _fetch_article_page(url)
+        # Page OG image takes priority; RSS entry image as fallback
+        og_image_url = page_og_image or rss_image_url
 
         # Step 2: trafilatura extraction
         if content is None and page_html:
@@ -161,6 +166,8 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
             if jina_content:
                 content = jina_content
                 content_source = "jina"
+    else:
+        og_image_url = rss_image_url
 
     # Step 4: fallback to RSS description
     if content is None:
@@ -182,19 +189,62 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
     }
 
 
+def _extract_image_from_entry(entry: feedparser.FeedParserDict) -> str | None:
+    """Extract image URL from RSS entry metadata without any HTTP request."""
+    for t in entry.get("media_thumbnail") or []:
+        url = t.get("url", "")
+        if url.startswith("http"):
+            return url
+    for m in entry.get("media_content") or []:
+        url = m.get("url", "")
+        if not url.startswith("http"):
+            continue
+        if m.get("medium") == "image" or "image" in m.get("type", ""):
+            return url
+    for enc in entry.get("enclosures") or []:
+        url = enc.get("url", "")
+        if url.startswith("http") and "image" in enc.get("type", ""):
+            return url
+    raw_desc = entry.get("summary") or ""
+    if raw_desc:
+        soup = BeautifulSoup(raw_desc, "html.parser")
+        img = soup.find("img")
+        if img:
+            src = str(img.get("src") or img.get("data-src") or "")
+            if src.startswith("http"):
+                return src
+    return None
+
+
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+}
+
+
 async def _fetch_article_page(url: str) -> tuple[str | None, str | None]:
     """Fetch article page once; return (og_image_url, raw_html)."""
     try:
         client = get_http_client()
-        response = await client.get(url, timeout=10)
+        response = await client.get(url, timeout=15, headers=_BROWSER_HEADERS)
         if response.status_code != 200:
+            logger.debug("og_image fetch non-200 url=%s status=%d", url, response.status_code)
             return None, None
         html = response.text
         soup = BeautifulSoup(html, "html.parser")
-        tag = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "og:image"})
-        og_image_url = str(tag["content"]) if tag and tag.get("content") else None
+        tag = (
+            soup.find("meta", attrs={"property": "og:image"})
+            or soup.find("meta", attrs={"name": "og:image"})
+        )
+        og_image_url = str(tag["content"]).strip() if tag and tag.get("content") else None
         return og_image_url, html
-    except Exception:
+    except Exception as exc:
+        logger.debug("og_image fetch failed url=%s error=%s", url, exc)
         return None, None
 
 

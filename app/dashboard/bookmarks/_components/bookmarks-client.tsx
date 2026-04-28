@@ -25,6 +25,7 @@ import {
 import DashboardNav from "@/app/dashboard/_components/dashboard-nav"
 import { markAsReadAction, markAsUnreadAction, toggleBookmarkAction } from "../../actions"
 import { createKeywordAction } from "../../keywords/actions"
+import { stripHtml } from "@/lib/utils"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -351,7 +352,7 @@ export default function BookmarksClient({
 
                   <CardContent className="px-4 pb-0">
                     <CardDescription className="line-clamp-3 text-[0.8rem] leading-relaxed">
-                      {item.description}
+                      {stripHtml(item.description)}
                     </CardDescription>
                   </CardContent>
 

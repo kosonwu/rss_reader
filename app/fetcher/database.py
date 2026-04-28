@@ -92,14 +92,16 @@ async def upsert_feed_items(feed_id: str, items: list[dict]) -> int:
     inserted = 0
     async with pool.acquire() as conn:
         for item in items:
-            result = await conn.execute(
+            row = await conn.fetchrow(
                 """
                 INSERT INTO feed_items
                     (feed_id, guid, title, description, content, url, author,
                      og_image_url, content_source, published_at, reading_time_minutes, fetched_at)
                 VALUES
                     ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
-                ON CONFLICT (feed_id, guid) DO NOTHING
+                ON CONFLICT (feed_id, guid) DO UPDATE
+                    SET og_image_url = COALESCE(feed_items.og_image_url, EXCLUDED.og_image_url)
+                RETURNING (xmax = 0) AS is_insert
                 """,
                 feed_id,
                 item["guid"],
@@ -113,8 +115,8 @@ async def upsert_feed_items(feed_id: str, items: list[dict]) -> int:
                 item.get("published_at"),
                 item.get("reading_time_minutes", 1),
             )
-            # asyncpg returns "INSERT 0 N" — parse N
-            if result.split()[-1] == "1":
+            # xmax = 0 means newly inserted row (not an update)
+            if row and row["is_insert"]:
                 inserted += 1
     return inserted
 
@@ -565,6 +567,30 @@ async def get_user_bookmark_data(user_id: str) -> list[asyncpg.Record]:
           AND  fi.embedding_content IS NOT NULL
         """,
         user_id,
+    )
+
+
+async def get_items_missing_og_image(limit: int) -> list[asyncpg.Record]:
+    """Return feed_items with no og_image_url that have a URL, newest first."""
+    pool = get_pool()
+    return await pool.fetch(
+        """
+        SELECT id, url FROM feed_items
+        WHERE og_image_url IS NULL AND url IS NOT NULL
+        ORDER BY fetched_at DESC
+        LIMIT $1
+        """,
+        limit,
+    )
+
+
+async def update_item_og_image(item_id: str, og_image_url: str) -> None:
+    """Set og_image_url only if currently NULL (never overwrites existing value)."""
+    pool = get_pool()
+    await pool.execute(
+        "UPDATE feed_items SET og_image_url = $2 WHERE id = $1 AND og_image_url IS NULL",
+        item_id,
+        og_image_url,
     )
 
 

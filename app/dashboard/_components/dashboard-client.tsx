@@ -25,7 +25,7 @@ import {
   SparklesIcon,
   BrainCircuitIcon,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, stripHtml } from "@/lib/utils"
 import { markAsReadAction, markAsUnreadAction, toggleBookmarkAction, bulkBookmarkByTagAction } from "../actions"
 import { createKeywordAction } from "@/app/dashboard/keywords/actions"
 import { toast } from "sonner"
@@ -1029,7 +1029,7 @@ export default function DashboardClient({
 
                   <CardContent className="px-4 pb-0">
                     <CardDescription className="line-clamp-3 text-[0.8rem] leading-relaxed">
-                      {item.description}
+                      {stripHtml(item.description)}
                     </CardDescription>
                   </CardContent>
 

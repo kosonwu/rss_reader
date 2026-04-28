@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     tag_extraction_coordinator_interval: int = 300  # seconds (5 minutes)
     ner_coordinator_interval: int = 300  # seconds (5 minutes)
     profile_coordinator_interval: int = 3600  # seconds (1 hour)
+    og_image_backfill_interval: int = 300  # seconds (5 minutes)
     log_level: str = "INFO"
 
     # Model names

@@ -14,7 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import database
 from config import settings
 from embedding_service import run_embedding_job
-from feed_fetcher import fetch_feed
+from feed_fetcher import fetch_feed, _fetch_article_page
 from tag_extraction_service import run_tag_extraction_job
 from ner_service import run_ner_job
 from user_profile_service import run_profile_job
@@ -56,6 +56,28 @@ async def _run_and_release(feed_id: str, feed_url: str) -> None:
         await fetch_feed(feed_id, feed_url)
     finally:
         _in_flight.discard(feed_id)
+
+
+async def _og_image_backfill() -> None:
+    """Batch-fill og_image_url for existing articles that have none."""
+    try:
+        items = await database.get_items_missing_og_image(20)
+    except Exception as exc:
+        logger.error("og_image_backfill: db query failed: %s", exc)
+        return
+
+    if not items:
+        logger.debug("og_image_backfill: nothing to backfill")
+        return
+
+    filled = 0
+    for row in items:
+        og_image_url, _ = await _fetch_article_page(str(row["url"]))
+        if og_image_url:
+            await database.update_item_og_image(str(row["id"]), og_image_url)
+            filled += 1
+
+    logger.info("og_image_backfill: filled=%d / checked=%d", filled, len(items))
 
 
 def start_scheduler() -> None:
@@ -101,15 +123,25 @@ def start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
     )
+    _scheduler.add_job(
+        _og_image_backfill,
+        trigger="interval",
+        seconds=settings.og_image_backfill_interval,
+        id="og_image_backfill",
+        max_instances=1,
+        coalesce=True,
+    )
     _scheduler.start()
     logger.info(
         "scheduler started (fetch_interval=%ds, embedding_interval=%ds, "
-        "tag_extraction_interval=%ds, ner_interval=%ds, profile_interval=%ds)",
+        "tag_extraction_interval=%ds, ner_interval=%ds, profile_interval=%ds, "
+        "og_image_backfill_interval=%ds)",
         settings.fetch_coordinator_interval,
         settings.embedding_coordinator_interval,
         settings.tag_extraction_coordinator_interval,
         settings.ner_coordinator_interval,
         settings.profile_coordinator_interval,
+        settings.og_image_backfill_interval,
     )
 
 

@@ -1,4 +1,8 @@
 {
+  "statusLine": {
+    "type": "command",
+    "command": "bash /c/Users/ZZ01M3858/rss_reader/.claude/statusline-command.sh"
+  },
   "permissions": {
     "allow": [
       "mcp__neon__describe_table_schema",
@@ -34,7 +38,9 @@
       "WebSearch",
       "WebFetch(domain:docs.railway.com)",
       "Bash(xargs ls *)",
-      "WebFetch(domain:distill-fetch.up.railway.app)"
+      "WebFetch(domain:distill-fetch.up.railway.app)",
+      "Bash(grep -E \"\\\\.py$|^d\")",
+      "Bash(grep -v \"^$\")"
     ]
   },
   "enabledMcpjsonServers": [
