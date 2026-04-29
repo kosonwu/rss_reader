@@ -1,8 +1,4 @@
 {
-  "statusLine": {
-    "type": "command",
-    "command": "bash /c/Users/ZZ01M3858/rss_reader/.claude/statusline-command.sh"
-  },
   "permissions": {
     "allow": [
       "mcp__neon__describe_table_schema",
@@ -40,10 +36,35 @@
       "Bash(xargs ls *)",
       "WebFetch(domain:distill-fetch.up.railway.app)",
       "Bash(grep -E \"\\\\.py$|^d\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(docker-compose up *)",
+      "Bash(docker exec rss_postgres *)",
+      "PowerShell(docker exec rss_postgres *)",
+      "Bash(where docker *)",
+      "Read(//c/Program Files/Docker/Docker/resources/bin/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(/c/Program Files/RedHat/Podman/podman.exe exec *)",
+      "Bash(npm uninstall *)",
+      "Bash(npm install *)",
+      "Bash(\"/c/Program Files/RedHat/Podman/podman.exe\" exec rss_postgres pg_dump \"postgresql://neondb_owner:npg_cPxMqw6R7bTA@ep-aged-salad-a18i9vwa-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" --no-owner --no-acl --data-only -F plain)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(grep -n \"\\\\\\\\\\\\\\\\restrict\" /c/Users/ZZ01M3858/rss_reader/neon_dump.sql)",
+      "Bash(grep *)",
+      "Bash(/c/Program Files/RedHat/Podman/podman.exe cp *)",
+      "Bash(\"/c/Program Files/RedHat/Podman/podman.exe\" exec -i rss_postgres psql -U rss_user -d rss_db)",
+      "Bash(bash ~/.claude/statusline-command.sh)",
+      "Bash(python3 ~/.claude/statusline.py)",
+      "Bash(python3 -c \"print\\('hello'\\)\")",
+      "Bash(/c/Python314/python.exe ~/.claude/statusline.py)",
+      "Bash(python3 *)",
+      "Bash(/c/Python314/python.exe *)"
     ]
   },
   "enabledMcpjsonServers": [
     "neon"
-  ]
+  ],
+  "statusLine": {
+    "type": "command",
+    "command": "bash /c/Users/ZZ01M3858/rss_reader/.claude/statusline-command.sh"
+  }
 }
