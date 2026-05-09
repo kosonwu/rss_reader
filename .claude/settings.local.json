@@ -71,7 +71,11 @@
       "Bash(npx next *)",
       "Bash(/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe *)",
       "Bash(\"/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe\" /c/Users/king-toshiba/.claude/statusline.py)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(Get-Content *)",
+      "PowerShell(claude doctor *)",
+      "Bash(git rm *)"
     ]
   },
   "enabledMcpjsonServers": [
