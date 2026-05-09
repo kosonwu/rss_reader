@@ -39,7 +39,7 @@ This project has two services:
 
 **Stack:**
 - **Framework:** Next.js 16 with App Router (`app/` directory)
-- **Auth:** Clerk (`@clerk/nextjs`) — `ClerkProvider` wraps the app in `app/layout.tsx`; auth state drives `Show when="signed-in/out"` in the header; Clerk proxy config lives in `proxy.ts` (Next.js proxy convention, replaces deprecated `middleware.ts`)
+- **Auth:** Clerk (`@clerk/nextjs`) — `ClerkProvider` wraps the app in `app/layout.tsx`; auth state drives `Show when="signed-in/out"` in the header; Clerk middleware lives in `proxy.ts` (uses `clerkMiddleware()`, named `proxy.ts` instead of the conventional `middleware.ts`)
 - **Database:** Neon (serverless PostgreSQL) via `@neondatabase/serverless`, accessed through Drizzle ORM
 - **ORM:** Drizzle — schema defined in `db/schema.ts`, client singleton exported from `db/index.ts`
 - **UI:** Tailwind CSS v4 + shadcn/ui (`radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`)
@@ -68,8 +68,10 @@ This project has two services:
 
 **Next.js API routes** (`app/api/`):
 - `/api/health` — health check
+- `/api/ping` — simple liveness ping, returns `{ ok: true }`
 - `/api/status` — fetcher status proxy
 - `/api/feed-items-count` — returns unread feed item counts
+- `/api/feed-status-counts` — returns feed status breakdown (`{ active, error, pending, paused, total }`); polled every 60s by the nav gauge widget
 - `/api/search` — semantic search proxy; forwards query to fetcher `/embed/query`, enriches results with per-user read/bookmark state
 
 ### Data helpers (`data/`)
@@ -78,7 +80,7 @@ One file per domain. All DB queries use Drizzle ORM — no raw SQL.
 
 | File | Key exports |
 |---|---|
-| `data/feeds.ts` | `getUserFeeds`, `getAllFeedsCount`, `getAllFeedsDetailed` |
+| `data/feeds.ts` | `getUserFeeds`, `getAllFeedsCount`, `getAllFeedsDetailed`, `getAllFeedsStatusCounts` (`FeedStatusCounts`), `addFeed`, `removeFeed`, `updateFeed`, `activateErrorFeeds` |
 | `data/feed-items.ts` | `getUserFeedItems`, `getUserFeedItemsCount` |
 | `data/keywords.ts` | `getUserKeywords` |
 | `data/subscriptions.ts` | `getSubscriptionsCount` |
@@ -124,20 +126,20 @@ uv run uvicorn main:app --reload
 
 - `feeds` — RSS feed sources with fetch status, interval, error tracking, and `language` enum (`en` / `zh-TW`)
 - `user_subscriptions` — maps Clerk `userId` (text) to feed IDs; has `displayName` and `isActive`
-- `feed_items` — individual articles per feed, including `og_image_url` for OG image caching, `content_source` enum (`feed_full` / `extracted` / `jina` / `summary_only`) for tracking extraction success rate, pgvector embedding fields (`embeddingContent`, `embeddingTitle` — 384-dim; `embeddingModel`, `embeddedAt` — null means not yet embedded), KeyBERT tag fields (`tags` text[], `tagsScores` real[], `tagsModel`, `tagsExtractedAt` — null means not yet extracted), NER fields (`nerEntities` jsonb `[{text, type}]` in unified OntoNotes namespace, `nerModel`, `nerExtractedAt`), and merged display tag fields (`displayTags` text[], `displayTagsMeta` jsonb `[{tag, type, score}]`, `displayTagsUpdatedAt`)
-- `keywords` — per-user keyword filters; has `isCaseSensitive` flag
+- `feed_items` — individual articles per feed, including `og_image_url` for OG image caching, `content_source` enum (`feed_full` / `extracted` / `jina` / `summary_only`) for tracking extraction success rate, pgvector embedding fields (`embeddingContent`, `embeddingTitle` — 384-dim; `embeddingModel`, `embeddedAt` — null means not yet embedded), KeyBERT tag fields (`tags` text[], `tagsScores` real[], `tagsModel`, `tagsExtractedAt` — null means not yet extracted), NER fields (`nerEntities` jsonb `[{text, type}]` in unified OntoNotes namespace, `nerModel`, `nerExtractedAt`), merged display tag fields (`displayTags` text[], `displayTagsMeta` jsonb `[{tag, type, score}]`, `displayTagsUpdatedAt`), and `readingTimeMinutes` (integer, default 1, computed by fetcher at write time)
+- `keywords` — per-user keyword filters; has `isCaseSensitive` flag and `source` field (`"manual"` | `"tag"` — whether added by user or promoted from an AI tag)
 - `fetch_logs` — audit log of each fetch run (success/failed/skipped, duration, article count)
 - `fetch_embedding_logs` — audit log of each embedding batch run (status, items_fetched/embedded/skipped, duration, model_name)
 - `fetch_tag_extraction_logs` — audit log of each KeyBERT tag extraction batch run (status, items_fetched/tagged/skipped, duration, model_name)
 - `fetch_ner_logs` — audit log of each NER batch run (status, items_fetched/tagged/skipped, duration, model_name)
 - `entity_tag_index` — denormalised index of NER entities and display tags per feed item; supports entity trend queries; unique on `(feedItemId, entityTextLower)`; used by `/dashboard/hot_topics`
 - `user_read_items` — per-user read tracking; unique on `(userId, feedItemId)`
-- `user_bookmarks` — per-user bookmarks; unique on `(userId, feedItemId)`
+- `user_bookmarks` — per-user bookmarks; unique on `(userId, feedItemId)`; soft-delete via `removedAt` (null = active, non-null = removed)
 - `user_profiles` — per-user taste profile computed offline from bookmarks; stores `taste_vector` (384-dim pgvector, L2-normalised weighted average of bookmarked item embeddings), `top_tags` (jsonb `[{tag, freq, type}]`), `bookmark_count`; indexed by HNSW on `taste_vector` for ANN search
 
 Drizzle config points to `./db/schema.ts` and outputs migrations to `./drizzle/`.
 
 ## Notes
 
-- `app/page.tsx` features grid lists: Subscriptions, Keywords, Bookmarks, Semantic Search, Auto Tags (KeyBERT), NER, Hot Topics, Fetch Logs, Health Monitor
+- `app/page.tsx` features grid lists: Semantic Search, Hot Topics, Keywords, Auto Tags (KeyBERT), NER, Bookmarks, Fetch Logs, Health Monitor
 - shadcn/ui components installed: `button`, `badge`, `calendar`, `card`, `chart` (Recharts), `popover`, `select`, `separator`, `input`, `label`, `checkbox`, `sonner`, `alert-dialog`, `dialog`, `table`, `pagination`, `dropdown-menu`

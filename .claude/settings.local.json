@@ -52,12 +52,26 @@
       "Bash(grep *)",
       "Bash(/c/Program Files/RedHat/Podman/podman.exe cp *)",
       "Bash(\"/c/Program Files/RedHat/Podman/podman.exe\" exec -i rss_postgres psql -U rss_user -d rss_db)",
-      "Bash(bash ~/.claude/statusline-command.sh)",
       "Bash(python3 ~/.claude/statusline.py)",
       "Bash(python3 -c \"print\\('hello'\\)\")",
       "Bash(/c/Python314/python.exe ~/.claude/statusline.py)",
       "Bash(python3 *)",
-      "Bash(/c/Python314/python.exe *)"
+      "Bash(/c/Python314/python.exe *)",
+      "Bash(claude doctor *)",
+      "Bash(npm i *)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe --version)",
+      "Bash(/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe /c/Users/king-toshiba/.claude/statusline.py)",
+      "Bash(docker *)",
+      "Bash(podman *)",
+      "Bash(pip --version)",
+      "PowerShell(podman run *)",
+      "PowerShell(podman ps *)",
+      "PowerShell(podman exec *)",
+      "Bash(npx next *)",
+      "Bash(/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe *)",
+      "Bash(\"/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe\" /c/Users/king-toshiba/.claude/statusline.py)",
+      "Bash(git add *)"
     ]
   },
   "enabledMcpjsonServers": [
@@ -65,6 +79,6 @@
   ],
   "statusLine": {
     "type": "command",
-    "command": "bash /c/Users/ZZ01M3858/rss_reader/.claude/statusline-command.sh"
+    "command": "/c/Users/king-toshiba/AppData/Local/Programs/Python/Python313/python.exe /c/Users/king-toshiba/.claude/statusline.py"
   }
 }

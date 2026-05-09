@@ -26,6 +26,13 @@ _scheduler: AsyncIOScheduler | None = None
 # Track in-flight fetch tasks so we don't double-fetch the same feed
 _in_flight: set[str] = set()
 
+# Limit concurrent feed fetches so the DB pool is never overwhelmed.
+# HTTP work inside each fetch is non-blocking, but the final DB writes
+# (upsert, update_feed, insert_log) all need pool connections at the
+# same time.  10 concurrent fetches leaves headroom for the 5 background
+# scheduler jobs while staying well under max_size=20.
+_fetch_sem: asyncio.Semaphore | None = None
+
 
 async def _coordinator() -> None:
     """Check for due feeds and launch fetch tasks."""
@@ -53,7 +60,8 @@ async def _coordinator() -> None:
 
 async def _run_and_release(feed_id: str, feed_url: str) -> None:
     try:
-        await fetch_feed(feed_id, feed_url)
+        async with _fetch_sem:
+            await fetch_feed(feed_id, feed_url)
     finally:
         _in_flight.discard(feed_id)
 
@@ -81,7 +89,8 @@ async def _og_image_backfill() -> None:
 
 
 def start_scheduler() -> None:
-    global _scheduler
+    global _scheduler, _fetch_sem
+    _fetch_sem = asyncio.Semaphore(10)
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(
         _coordinator,

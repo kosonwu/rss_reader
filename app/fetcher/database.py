@@ -15,9 +15,10 @@ async def init_pool() -> None:
     global _pool
     _pool = await asyncpg.create_pool(
         dsn=settings.database_url,
-        min_size=1,
-        max_size=5,
+        min_size=2,
+        max_size=20,
         command_timeout=30,
+        max_inactive_connection_lifetime=300.0,
     )
 
 
@@ -84,41 +85,44 @@ async def upsert_feed_items(feed_id: str, items: list[dict]) -> int:
     """
     Insert new feed items; skip duplicates (feed_id, guid).
     Returns the number of rows actually inserted.
+    Uses a single batch INSERT via UNNEST to minimise connection hold time.
     """
     if not items:
         return 0
 
     pool = get_pool()
-    inserted = 0
-    async with pool.acquire() as conn:
-        for item in items:
-            row = await conn.fetchrow(
-                """
-                INSERT INTO feed_items
-                    (feed_id, guid, title, description, content, url, author,
-                     og_image_url, content_source, published_at, reading_time_minutes, fetched_at)
-                VALUES
-                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
-                ON CONFLICT (feed_id, guid) DO UPDATE
-                    SET og_image_url = COALESCE(feed_items.og_image_url, EXCLUDED.og_image_url)
-                RETURNING (xmax = 0) AS is_insert
-                """,
-                feed_id,
-                item["guid"],
-                item.get("title"),
-                item.get("description"),
-                item.get("content"),
-                item.get("url"),
-                item.get("author"),
-                item.get("og_image_url"),
-                item.get("content_source"),
-                item.get("published_at"),
-                item.get("reading_time_minutes", 1),
-            )
-            # xmax = 0 means newly inserted row (not an update)
-            if row and row["is_insert"]:
-                inserted += 1
-    return inserted
+    rows = await pool.fetch(
+        """
+        INSERT INTO feed_items
+            (feed_id, guid, title, description, content, url, author,
+             og_image_url, content_source, published_at, reading_time_minutes, fetched_at)
+        SELECT
+            $1,
+            t.guid, t.title, t.description, t.content, t.url, t.author,
+            t.og_image_url, t.content_source::content_source, t.published_at,
+            t.reading_time_minutes, now()
+        FROM UNNEST(
+            $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[],
+            $9::text[], $10::timestamptz[], $11::int[]
+        ) AS t(guid, title, description, content, url, author, og_image_url,
+               content_source, published_at, reading_time_minutes)
+        ON CONFLICT (feed_id, guid) DO UPDATE
+            SET og_image_url = COALESCE(feed_items.og_image_url, EXCLUDED.og_image_url)
+        RETURNING (xmax = 0) AS is_insert
+        """,
+        feed_id,
+        [item["guid"] for item in items],
+        [item.get("title") for item in items],
+        [item.get("description") for item in items],
+        [item.get("content") for item in items],
+        [item.get("url") for item in items],
+        [item.get("author") for item in items],
+        [item.get("og_image_url") for item in items],
+        [item.get("content_source") for item in items],
+        [item.get("published_at") for item in items],
+        [item.get("reading_time_minutes", 1) for item in items],
+    )
+    return sum(1 for row in rows if row["is_insert"])
 
 
 async def update_feed_success(feed_id: str) -> None:

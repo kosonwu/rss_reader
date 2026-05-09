@@ -64,7 +64,11 @@ async def fetch_feed(feed_id: str, feed_url: str) -> None:
 
     try:
         raw = await _download(feed_url)
-        parsed = feedparser.parse(raw)
+
+        # feedparser.parse is CPU-bound and synchronous; run it in a thread
+        # so it doesn't block the event loop and stall asyncpg connection releases.
+        loop = asyncio.get_running_loop()
+        parsed = await loop.run_in_executor(None, feedparser.parse, raw)
 
         if parsed.bozo and not parsed.entries:
             raise ValueError(f"feedparser error: {parsed.bozo_exception}")
@@ -86,13 +90,16 @@ async def fetch_feed(feed_id: str, feed_url: str) -> None:
         duration_ms = int((time.monotonic() - start) * 1000)
         error_str = str(exc) or repr(exc)
         logger.warning("feed=%s url=%s error=%s", feed_id, feed_url, error_str)
-        await database.update_feed_error(feed_id, error_str)
-        await database.insert_fetch_log(
-            feed_id=feed_id,
-            status="failed",
-            duration_ms=duration_ms,
-            error_message=error_str,
-        )
+        try:
+            await database.update_feed_error(feed_id, error_str)
+            await database.insert_fetch_log(
+                feed_id=feed_id,
+                status="failed",
+                duration_ms=duration_ms,
+                error_message=error_str,
+            )
+        except Exception as db_exc:
+            logger.error("feed=%s failed to persist error to DB: %s", feed_id, db_exc)
 
 
 # ---------------------------------------------------------------------------
