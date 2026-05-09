@@ -28,7 +28,7 @@ podman volume inspect postgres_data
 
 ### 查看容器 Mount 信息
 ```powershell
-podman inspect rss_postgres | findstr -A 10 "Mounts"
+podman inspect postgres-local | findstr -A 10 "Mounts"
 ```
 
 ---
@@ -69,12 +69,12 @@ postgres_data Volume（命名 Volume）
 
 ### 進入 PostgreSQL 查詢數據庫 OID
 ```powershell
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';"
 ```
 
 ### 從 Windows 複製備份
 ```powershell
-podman cp rss_postgres:/var/lib/postgresql/data C:\backup\
+podman cp postgres-local:/var/lib/postgresql/data C:\backup\
 ```
 
 ### 查看 Volume 大小
@@ -89,7 +89,7 @@ podman volume ls
 
 ### 查看 PostgreSQL 數據文件詳情
 ```powershell
-podman exec rss_postgres ls -lah /var/lib/postgresql/data
+podman exec postgres-local ls -lah /var/lib/postgresql/data
 ```
 
 ---
@@ -117,12 +117,12 @@ podman run --rm -v postgres_data:/data -v C:\backup:/backup busybox tar czf /bac
 
 ### 備份特定數據庫
 ```powershell
-podman exec rss_postgres pg_dump -U rss_user -d rss_db > C:\backup\rss_db_backup.sql
+podman exec postgres-local pg_dump -U rss_user -d rss_db > C:\backup\rss_db_backup.sql
 ```
 
 ### 恢復數據庫
 ```powershell
-cat C:\backup\rss_db_backup.sql | podman exec -i rss_postgres psql -U rss_user -d rss_db
+cat C:\backup\rss_db_backup.sql | podman exec -i postgres-local psql -U rss_user -d rss_db
 ```
 
 ---
@@ -150,7 +150,7 @@ DBeaver / SQuirreL / psql
 
 ### 2. 通過 Podman 命令
 ```
-podman exec -it rss_postgres bash
+podman exec -it postgres-local bash
     ↓
 查看 /var/lib/postgresql/data
 ```
@@ -182,13 +182,13 @@ podman exec -it rss_postgres bash
 podman volume inspect postgres_data
 
 # 進入容器
-podman exec -it rss_postgres bash
+podman exec -it postgres-local bash
 
 # 查看數據位置和大小
-podman exec rss_postgres du -sh /var/lib/postgresql/data
+podman exec postgres-local du -sh /var/lib/postgresql/data
 
 # 查詢數據庫 OID
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';"
 
 # 列出所有 volume
 podman volume ls

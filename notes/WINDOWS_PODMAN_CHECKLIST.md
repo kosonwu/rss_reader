@@ -104,7 +104,7 @@ version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: rss_postgres
+    container_name: postgres-local
     environment:
       POSTGRES_USER: rss_user
       POSTGRES_PASSWORD: rss_password
@@ -160,7 +160,7 @@ dir
 podman-compose up -d
 ```
 - [ ] 執行命令
-- [ ] 看到類似輸出：`Creating rss_postgres ... done`
+- [ ] 看到類似輸出：`Creating postgres-local ... done`
 - [ ] ⏳ 首次可能需要 5-10 分鐘（下載映像）
 
 ✅ **容器已啟動！**
@@ -170,7 +170,7 @@ podman-compose up -d
 podman ps
 ```
 - [ ] 看到列表
-- [ ] 其中有一行包含 `rss_postgres`
+- [ ] 其中有一行包含 `postgres-local`
 - [ ] STATUS 欄顯示 `Up` 和時間（例如 `Up 2 minutes`）
 
 ✅ **PostgreSQL 容器正在運行！**
@@ -181,7 +181,7 @@ podman ps
 
 ### Step 5.1: 連接到 PostgreSQL
 ```powershell
-podman exec -it rss_postgres psql -U rss_user -d rss_db
+podman exec -it postgres-local psql -U rss_user -d rss_db
 ```
 - [ ] 執行命令
 - [ ] 看到提示符變成 `rss_db=#`
@@ -319,13 +319,13 @@ except Exception as e:
 podman ps
 
 # 檢查容器日誌
-podman logs rss_postgres
+podman logs postgres-local
 
 # 檢查 PostgreSQL 版本
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT version();"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT version();"
 
 # 檢查 pgvector
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 ```
 
 - [ ] 所有命令都執行成功（無錯誤）
@@ -356,13 +356,13 @@ podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT extname FROM 
 | 功能 | 命令 |
 |------|------|
 | 查看容器 | `podman ps` |
-| 查看日誌 | `podman logs rss_postgres` |
-| 進入 PostgreSQL | `podman exec -it rss_postgres psql -U rss_user -d rss_db` |
+| 查看日誌 | `podman logs postgres-local` |
+| 進入 PostgreSQL | `podman exec -it postgres-local psql -U rss_user -d rss_db` |
 | 停止容器 | `podman-compose down` |
 | 重啟容器 | `podman-compose restart` |
 | 刪除所有數據 | `podman-compose down -v` |
-| 備份數據庫 | `podman exec rss_postgres pg_dump -U rss_user rss_db > backup.sql` |
-| 恢復數據庫 | `cat backup.sql \| podman exec -i rss_postgres psql -U rss_user rss_db` |
+| 備份數據庫 | `podman exec postgres-local pg_dump -U rss_user rss_db > backup.sql` |
+| 恢復數據庫 | `cat backup.sql \| podman exec -i postgres-local psql -U rss_user rss_db` |
 
 ---
 
@@ -370,7 +370,7 @@ podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT extname FROM 
 
 1. **查看詳細日誌：**
 ```powershell
-podman logs rss_postgres
+podman logs postgres-local
 ```
 
 2. **重新啟動容器：**
@@ -380,7 +380,7 @@ podman-compose restart
 
 3. **檢查連接：**
 ```powershell
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT 1;"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT 1;"
 ```
 
 4. **查看 Podman 系統狀態：**

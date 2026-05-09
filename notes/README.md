@@ -223,7 +223,7 @@ YAML 內容已包含在所有指南中。
 
 2. **檢查日誌**
    ```powershell
-   podman logs rss_postgres
+   podman logs postgres-local
    ```
 
 3. **重新啟動容器**
@@ -301,8 +301,8 @@ YAML 內容已包含在所有指南中。
 ### 記住主要命令
 ```powershell
 podman ps                    # 查看容器
-podman logs rss_postgres     # 查看日誌
-podman exec -it rss_postgres psql -U rss_user -d rss_db  # 進入 DB
+podman logs postgres-local     # 查看日誌
+podman exec -it postgres-local psql -U rss_user -d rss_db  # 進入 DB
 podman-compose down          # 停止
 podman-compose up -d         # 啟動
 ```

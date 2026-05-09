@@ -5,7 +5,7 @@ And make this plan and PostgreSQL_task.md in notes/ to track the changes.
 Replace Neon (serverless PostgreSQL) with a local PostgreSQL container (`pgvector/pgvector:pg17`) while keeping all features intact.
 
 ## Local DB Info
-- Container: `rss_postgres`
+- Container: `postgres-local`
 - Host: `localhost:5432`
 - User: `rss_user` / Password: `rss_password`
 - Database: `rss_db`
@@ -29,9 +29,9 @@ Replace Neon (serverless PostgreSQL) with a local PostgreSQL container (`pgvecto
 ---
 
 ## Data Migration Notes (Step 8)
-- Used `pg_dump` from inside the `rss_postgres` Podman container to dump Neon data
+- Used `pg_dump` from inside the `postgres-local` Podman container to dump Neon data
 - Stripped Neon-specific `\restrict` header line before restoring
-- Restored with `podman exec -i rss_postgres psql ...` via stdin pipe
+- Restored with `podman exec -i postgres-local psql ...` via stdin pipe
 - Only expected error: `__drizzle_migrations` duplicate key (already populated by Step 7) — harmless
 
 ---
@@ -59,7 +59,7 @@ postgresql://rss_user:rss_password@localhost:5432/rss_db
 cd C:\Users\ZZ01M3858\postgres && docker-compose up -d
 
 # Check row counts
-podman exec rss_postgres psql -U rss_user -d rss_db -c "SELECT COUNT(*) FROM feeds; SELECT COUNT(*) FROM feed_items;"
+podman exec postgres-local psql -U rss_user -d rss_db -c "SELECT COUNT(*) FROM feeds; SELECT COUNT(*) FROM feed_items;"
 
 # Start Next.js
 npm run dev
@@ -74,10 +74,10 @@ cd app/fetcher && uv run uvicorn main:app --reload
 ## Container Management
 ```bash
 # Stop container
-podman stop rss_postgres
+podman stop postgres-local
 
 # Start container
-podman start rss_postgres
+podman start postgres-local
 
 # Or via compose
 cd C:\Users\ZZ01M3858\postgres

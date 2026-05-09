@@ -90,7 +90,7 @@ podman volume inspect postgres_data
 執行以下命令查看你的 PostgreSQL 容器：
 
 ```powershell
-podman inspect rss_postgres
+podman inspect postgres-local
 ```
 
 在輸出中查找 `Mounts` 部分：
@@ -210,7 +210,7 @@ ls -la
 
 ```powershell
 # 進入容器
-podman exec -it rss_postgres bash
+podman exec -it postgres-local bash
 
 # 查看數據位置
 ls -la /var/lib/postgresql/data
@@ -226,7 +226,7 @@ PostgreSQL 為每個數據庫分配一個對象識別碼 (OID)：
 
 ```powershell
 # 進入 PostgreSQL
-podman exec -it rss_postgres psql -U rss_user -d rss_db
+podman exec -it postgres-local psql -U rss_user -d rss_db
 
 # 在 PostgreSQL 提示符中執行
 postgres=# SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';
@@ -257,7 +257,7 @@ postgres=# SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';
 
 ```powershell
 # 使用 podman cp 複製數據
-podman cp rss_postgres:/var/lib/postgresql/data C:\Users\<YourUsername>\Desktop\postgresql_backup\
+podman cp postgres-local:/var/lib/postgresql/data C:\Users\<YourUsername>\Desktop\postgresql_backup\
 
 # 或壓縮備份
 podman run --rm -v postgres_data:/data -v C:\backup:/backup busybox tar czf /backup/postgres_backup.tar.gz -C /data .
@@ -267,14 +267,14 @@ podman run --rm -v postgres_data:/data -v C:\backup:/backup busybox tar czf /bac
 
 ```powershell
 # 進入容器並使用 pg_dump
-podman exec rss_postgres pg_dump -U rss_user -d rss_db > C:\Users\<YourUsername>\Desktop\rss_db_backup.sql
+podman exec postgres-local pg_dump -U rss_user -d rss_db > C:\Users\<YourUsername>\Desktop\rss_db_backup.sql
 ```
 
 ### 恢復數據庫
 
 ```powershell
 # 從 SQL 備份恢復
-cat C:\Users\<YourUsername>\Desktop\rss_db_backup.sql | podman exec -i rss_postgres psql -U rss_user -d rss_db
+cat C:\Users\<YourUsername>\Desktop\rss_db_backup.sql | podman exec -i postgres-local psql -U rss_user -d rss_db
 ```
 
 ---
@@ -368,10 +368,10 @@ podman volume prune
 podman volume inspect postgres_data
 
 # 進入 PostgreSQL 容器
-podman exec -it rss_postgres bash
+podman exec -it postgres-local bash
 
 # 查看 rss_db 數據庫 OID
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT datname, oid FROM pg_database WHERE datname = 'rss_db';"
 
 # 查看 Volume 大小
 podman run --rm -v postgres_data:/data busybox du -sh /data
@@ -380,7 +380,7 @@ podman run --rm -v postgres_data:/data busybox du -sh /data
 podman volume ls
 
 # 從 Windows 備份
-podman cp rss_postgres:/var/lib/postgresql/data C:\backup\
+podman cp postgres-local:/var/lib/postgresql/data C:\backup\
 ```
 
 你的所有 RSS 數據都安全地存儲在這個位置，只要 Volume 存在，數據就不會丟失！

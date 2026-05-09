@@ -134,7 +134,7 @@ version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: rss_postgres
+    container_name: postgres-local
     environment:
       POSTGRES_USER: rss_user
       POSTGRES_PASSWORD: rss_password
@@ -195,7 +195,7 @@ podman compose up -d
 
 ✅ 應該看到類似輸出：
 ```
-Creating rss_postgres ... done
+Creating postgres-local ... done
 ```
 
 ⏳ **首次執行會比較慢（下載映像，約 5-10 分鐘），請耐心等待...**
@@ -212,7 +212,7 @@ CONTAINER ID   IMAGE                      STATUS
 abc1234d5e6f   pgvector/pgvector:pg17    Up 2 minutes
 ```
 
-如果看到 `rss_postgres` 容器且 STATUS 是 "Up"，代表成功！
+如果看到 `postgres-local` 容器且 STATUS 是 "Up"，代表成功！
 
 ---
 
@@ -221,7 +221,7 @@ abc1234d5e6f   pgvector/pgvector:pg17    Up 2 minutes
 ### 6.1 連接到 PostgreSQL
 
 ```powershell
-podman exec -it rss_postgres psql -U rss_user -d rss_db
+podman exec -it postgres-local psql -U rss_user -d rss_db
 ```
 
 ✅ 應該看到提示符變成：
@@ -368,13 +368,13 @@ podman ps
 ### 查看容器日誌
 
 ```powershell
-podman logs rss_postgres
+podman logs postgres-local
 ```
 
 ### 進入 PostgreSQL 命令列
 
 ```powershell
-podman exec -it rss_postgres psql -U rss_user -d rss_db
+podman exec -it postgres-local psql -U rss_user -d rss_db
 ```
 
 ### 停止容器
@@ -409,7 +409,7 @@ podman info
 |------|------|---------|
 | `command not found: podman-compose` | podman-compose 未安裝或不在 PATH | 在 Podman Desktop 設定中重新安裝 CLI 工具，或重新啟動 PowerShell |
 | `Cannot connect to Podman` | Podman 服務未啟動 | 確保 Podman Desktop 正在運行 |
-| `Connection refused - localhost:5432` | 容器未啟動 | 執行 `podman ps` 確認容器狀態，或查看日誌 `podman logs rss_postgres` |
+| `Connection refused - localhost:5432` | 容器未啟動 | 執行 `podman ps` 確認容器狀態，或查看日誌 `podman logs postgres-local` |
 | `password authentication failed` | 密碼不匹配 | 檢查 `.env.local` 和 `docker-compose.yml` 中的密碼是否一致 |
 | WSL2 緩慢 | 儲存位置 | 考慮調整 WSL2 配置（見下方優化部分） |
 
@@ -418,7 +418,7 @@ podman info
 如果容器無法啟動，查看詳細日誌：
 
 ```powershell
-podman logs rss_postgres
+podman logs postgres-local
 ```
 
 ---
@@ -496,10 +496,10 @@ CREATE INDEX ON feed_items USING hnsw (embedding vector_cosine_ops);
 
 ```powershell
 # 備份
-podman exec rss_postgres pg_dump -U rss_user rss_db > backup.sql
+podman exec postgres-local pg_dump -U rss_user rss_db > backup.sql
 
 # 恢復
-cat backup.sql | podman exec -i rss_postgres psql -U rss_user rss_db
+cat backup.sql | podman exec -i postgres-local psql -U rss_user rss_db
 ```
 
 ---

@@ -34,7 +34,7 @@ podman-compose up -d
 
 ### Step 5: 啟用 pgvector
 ```powershell
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "CREATE EXTENSION IF NOT EXISTS vector;"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 
 ---
@@ -47,7 +47,7 @@ version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: rss_postgres
+    container_name: postgres-local
     environment:
       POSTGRES_USER: rss_user
       POSTGRES_PASSWORD: rss_password
@@ -76,7 +76,7 @@ volumes:
 - [ ] `podman --version` 有輸出
 - [ ] `podman-compose.yml` 已建立
 - [ ] `podman-compose up -d` 執行成功
-- [ ] `podman ps` 可以看到 rss_postgres 容器
+- [ ] `podman ps` 可以看到 postgres-local 容器
 - [ ] `.env.local` 包含 `DATABASE_URL="postgresql://rss_user:rss_password@localhost:5432/rss_db"`
 - [ ] `npx drizzle-kit push` 執行成功
 - [ ] Python 連接測試成功
@@ -110,10 +110,10 @@ postgresql://rss_user:rss_password@localhost:5432/rss_db
 podman ps
 
 # 進入 PostgreSQL
-podman exec -it rss_postgres psql -U rss_user -d rss_db
+podman exec -it postgres-local psql -U rss_user -d rss_db
 
 # 查看日誌
-podman logs rss_postgres
+podman logs postgres-local
 
 # 停止容器
 podman-compose down
@@ -222,8 +222,8 @@ conn.close()
 # 全部執行這些命令，應該都不會報錯
 
 podman ps
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "SELECT version();"
-podman exec -it rss_postgres psql -U rss_user -d rss_db -c "CREATE EXTENSION IF NOT EXISTS vector; SELECT extname FROM pg_extension WHERE extname = 'vector';"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "SELECT version();"
+podman exec -it postgres-local psql -U rss_user -d rss_db -c "CREATE EXTENSION IF NOT EXISTS vector; SELECT extname FROM pg_extension WHERE extname = 'vector';"
 ```
 
 ✅ 如果都成功，設置完成！
@@ -244,10 +244,10 @@ podman exec -it rss_postgres psql -U rss_user -d rss_db -c "CREATE EXTENSION IF 
 
 ```powershell
 # 備份
-podman exec rss_postgres pg_dump -U rss_user rss_db > backup.sql
+podman exec postgres-local pg_dump -U rss_user rss_db > backup.sql
 
 # 恢復
-cat backup.sql | podman exec -i rss_postgres psql -U rss_user rss_db
+cat backup.sql | podman exec -i postgres-local psql -U rss_user rss_db
 ```
 
 ---

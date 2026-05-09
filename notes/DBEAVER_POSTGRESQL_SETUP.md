@@ -136,7 +136,7 @@ Password:       rss_password
    ```powershell
    podman ps
    ```
-   應該看到 `rss_postgres` 容器運行中
+   應該看到 `postgres-local` 容器運行中
 
 2. 確認憑證正確
    - 用戶名：`rss_user`
