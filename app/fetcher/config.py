@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Model names
     embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2"
     ner_ckip_model: str = "albert-base"  # used for both NER chunker and word segmenter
-    ner_spacy_model: str = "en_core_web_sm"
+    ner_spacy_model: str = "en_core_web_md"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

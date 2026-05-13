@@ -19,7 +19,7 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-_BATCH_SIZE = 10
+_BATCH_SIZE = 20
 
 _model: SentenceTransformer | None = None
 

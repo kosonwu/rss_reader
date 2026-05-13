@@ -1,6 +1,6 @@
 """
 NER background service.
-Uses CKIP CkipNerChunker for zh-TW feed items and spaCy en_core_web_sm for all others.
+Uses CKIP CkipNerChunker for zh-TW feed items and spaCy en_core_web_md for all others.
 Entity labels are normalised to the unified OntoNotes namespace defined in _LABEL_MAP.
 """
 
@@ -23,7 +23,7 @@ from text_utils import clean_token, preprocess
 
 logger = logging.getLogger(__name__)
 
-_BATCH_SIZE = 10
+_BATCH_SIZE = 20
 
 
 def _ckip_model_display_name() -> str:

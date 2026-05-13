@@ -19,7 +19,7 @@ npm run build    # Production build
 npm run lint     # Run ESLint
 ```
 
-### Database (Drizzle + Neon)
+### Database (Drizzle + PostgreSQL)
 
 ```bash
 npx drizzle-kit generate   # Generate migrations from schema changes
@@ -27,7 +27,7 @@ npx drizzle-kit migrate    # Apply migrations to the database
 npx drizzle-kit studio     # Open Drizzle Studio (DB browser)
 ```
 
-Requires `DATABASE_URL` environment variable pointing to a Neon PostgreSQL instance.
+Requires `DATABASE_URL` environment variable pointing to a PostgreSQL instance (local or remote).
 
 ## Architecture
 
@@ -40,7 +40,7 @@ This project has two services:
 **Stack:**
 - **Framework:** Next.js 16 with App Router (`app/` directory)
 - **Auth:** Clerk (`@clerk/nextjs`) — `ClerkProvider` wraps the app in `app/layout.tsx`; auth state drives `Show when="signed-in/out"` in the header; Clerk middleware lives in `proxy.ts` (uses `clerkMiddleware()`, named `proxy.ts` instead of the conventional `middleware.ts`)
-- **Database:** Neon (serverless PostgreSQL) via `@neondatabase/serverless`, accessed through Drizzle ORM
+- **Database:** PostgreSQL via `pg` (node-postgres), accessed through Drizzle ORM
 - **ORM:** Drizzle — schema defined in `db/schema.ts`, client singleton exported from `db/index.ts`
 - **UI:** Tailwind CSS v4 + shadcn/ui (`radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`)
 - **Charts:** shadcn `ChartContainer` + Recharts (`recharts`) — installed via `npx shadcn@latest add chart`; component at `components/ui/chart.tsx`
@@ -104,7 +104,7 @@ Standalone FastAPI service that polls the database and fetches RSS feeds on sche
 - In-flight tracking prevents double-fetching the same feed concurrently
 - A separate embedding job runs every `EMBEDDING_COORDINATOR_INTERVAL` seconds; it batch-encodes up to 10 unembedded `feed_items` using `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (384-dim) and writes title + content vectors back to the DB; each run is logged to `fetch_embedding_logs`
 - A tag extraction job runs every `TAG_EXTRACTION_COORDINATOR_INTERVAL` seconds; it uses KeyBERT (sharing the same SentenceTransformer model) to extract up to 7 topic tags per untagged `feed_item` and writes `tags`, `tagsScores`, `tagsModel`, `tagsExtractedAt` back to the DB; each run is logged to `fetch_tag_extraction_logs`; for zh-TW feeds, CKIP word segmentation is applied before KeyBERT to produce meaningful candidates
-- A NER job runs every `NER_COORDINATOR_INTERVAL` seconds; it uses CKIP `CkipNerChunker` (albert-base) for zh-TW items and spaCy `en_core_web_sm` for others; entity labels are normalised to a unified OntoNotes namespace; results are written to `nerEntities`, `nerModel`, `nerExtractedAt` on `feed_items`; each run is logged to `fetch_ner_logs`
+- A NER job runs every `NER_COORDINATOR_INTERVAL` seconds; it uses CKIP `CkipNerChunker` (albert-base) for zh-TW items and spaCy `en_core_web_md` for others; entity labels are normalised to a unified OntoNotes namespace; results are written to `nerEntities`, `nerModel`, `nerExtractedAt` on `feed_items`; each run is logged to `fetch_ner_logs`
 - After each NER or tag extraction run, a `display_tags` pass merges NER entities and KeyBERT tags using a scoring formula (NER type weights + title-match bonus) into `displayTags`, `displayTagsMeta`, `displayTagsUpdatedAt` on `feed_items`, and upserts entries into `entity_tag_index`
 - A user profile job runs every `PROFILE_COORDINATOR_INTERVAL` seconds (default 3600); for each user with bookmarks it computes a `taste_vector` (weighted average of `embeddingContent` vectors, weight = retention duration via log formula) and `top_tags` (weighted tag frequency from `displayTagsMeta`), then upserts into `user_profiles`; no model calls — uses pre-computed DB vectors only; logs to stdout only (no DB log table)
 
@@ -114,12 +114,16 @@ Standalone FastAPI service that polls the database and fetches RSS feeds on sche
 - `POST /fetch/{feed_id}` — manually trigger a fetch for one feed
 - `POST /embed/query` — semantic search: accepts `{ query, user_id, limit }`, returns feed items ranked by cosine similarity to the query embedding
 
-**Env vars:** `DATABASE_URL`, `FETCH_COORDINATOR_INTERVAL` (seconds, default 60), `EMBEDDING_COORDINATOR_INTERVAL` (seconds, default 90), `TAG_EXTRACTION_COORDINATOR_INTERVAL` (seconds, default 60), `NER_COORDINATOR_INTERVAL` (seconds, default 60), `PROFILE_COORDINATOR_INTERVAL` (seconds, default 3600), `EMBEDDING_MODEL` (default `paraphrase-multilingual-MiniLM-L12-v2`), `NER_CKIP_MODEL` (default `albert-base`), `NER_SPACY_MODEL` (default `en_core_web_sm`), `LOG_LEVEL` (default INFO)
+**Env vars:** `DATABASE_URL`, `FETCH_COORDINATOR_INTERVAL` (seconds, default 60), `EMBEDDING_COORDINATOR_INTERVAL` (seconds, default 90), `TAG_EXTRACTION_COORDINATOR_INTERVAL` (seconds, default 60), `NER_COORDINATOR_INTERVAL` (seconds, default 60), `PROFILE_COORDINATOR_INTERVAL` (seconds, default 3600), `EMBEDDING_MODEL` (default `paraphrase-multilingual-MiniLM-L12-v2`), `NER_CKIP_MODEL` (default `albert-base`), `NER_SPACY_MODEL` (default `en_core_web_md`), `LOG_LEVEL` (default INFO)
 
-**Run with uv:**
+**Run (activate venv first):**
 ```bash
-cd app/fetcher
-uv run uvicorn main:app --reload
+# Windows
+cd app\fetcher
+.venv\Scripts\activate
+uvicorn main:app --reload --port 8000
+
+# Or use start.bat from project root to launch both services at once
 ```
 
 ### Database schema (`db/schema.ts`)

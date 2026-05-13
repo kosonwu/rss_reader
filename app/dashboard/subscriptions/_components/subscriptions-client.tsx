@@ -90,6 +90,7 @@ type AvailableFeed = {
   title: string | null;
   url: string;
   description: string | null;
+  language: "en" | "zh-TW" | null;
 };
 
 // ── Shared field styles ───────────────────────────────────────────────────────
@@ -109,16 +110,28 @@ function AddDialog({
   onOpenChange: (open: boolean) => void;
   availableFeeds: AvailableFeed[];
 }) {
+  const [langFilter, setLangFilter] = useState<"all" | "en" | "zh-TW">("all");
   const [feedId, setFeedId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  const selectedFeed = availableFeeds.find((f) => f.id === feedId) ?? null;
+  const filteredFeeds =
+    langFilter === "all"
+      ? availableFeeds
+      : availableFeeds.filter((f) => f.language === langFilter);
+
+  const selectedFeed = filteredFeeds.find((f) => f.id === feedId) ?? null;
+
+  function handleLangChange(lang: "all" | "en" | "zh-TW") {
+    setLangFilter(lang);
+    setFeedId("");
+    setDisplayName("");
+  }
 
   function handleFeedChange(id: string) {
     setFeedId(id);
-    const feed = availableFeeds.find((f) => f.id === id);
+    const feed = filteredFeeds.find((f) => f.id === id);
     const desc = feed?.description ?? "";
     setDisplayName(desc.length > 30 ? desc.slice(0, 30) + "…" : desc);
   }
@@ -160,25 +173,52 @@ function AddDialog({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 pt-1">
             <div className="space-y-2">
+              <Label htmlFor="sub-lang" className={labelCls}>
+                Language
+              </Label>
+              <Select value={langFilter} onValueChange={(v) => handleLangChange(v as "all" | "en" | "zh-TW")}>
+                <SelectTrigger id="sub-lang" className={`w-full ${inputCls}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                  <SelectItem value="all" className="font-mono text-sm focus:bg-white/8 focus:text-foreground">
+                    All languages
+                  </SelectItem>
+                  <SelectItem value="en" className="font-mono text-sm focus:bg-white/8 focus:text-foreground">
+                    English
+                  </SelectItem>
+                  <SelectItem value="zh-TW" className="font-mono text-sm focus:bg-white/8 focus:text-foreground">
+                    中文
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="sub-feed" className={labelCls}>
                 Feed <span className="text-amber-400">*</span>
               </Label>
-              <Select value={feedId} onValueChange={handleFeedChange}>
-                <SelectTrigger id="sub-feed" className={`w-full ${inputCls}`}>
-                  <SelectValue placeholder="Select a feed…" />
-                </SelectTrigger>
-                <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
-                  {availableFeeds.map((f) => (
-                    <SelectItem
-                      key={f.id}
-                      value={f.id}
-                      className="font-mono text-sm focus:bg-white/8 focus:text-foreground"
-                    >
-                      {f.title ?? f.url}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {filteredFeeds.length === 0 ? (
+                <p className="text-xs font-mono text-muted-foreground py-1">
+                  No feeds available for this language.
+                </p>
+              ) : (
+                <Select value={feedId} onValueChange={handleFeedChange}>
+                  <SelectTrigger id="sub-feed" className={`w-full ${inputCls}`}>
+                    <SelectValue placeholder="Select a feed…" />
+                  </SelectTrigger>
+                  <SelectContent className="dark bg-[oklch(0.13_0_0)] border-white/10 text-foreground">
+                    {filteredFeeds.map((f) => (
+                      <SelectItem
+                        key={f.id}
+                        value={f.id}
+                        className="font-mono text-sm focus:bg-white/8 focus:text-foreground"
+                      >
+                        {f.title ?? f.url}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             {selectedFeed?.description && (
               <div className="space-y-1">
@@ -218,7 +258,7 @@ function AddDialog({
               </DialogClose>
               <Button
                 type="submit"
-                disabled={isPending || !feedId}
+                disabled={isPending || !feedId || filteredFeeds.length === 0}
                 className="bg-amber-500 text-black hover:bg-amber-400"
               >
                 {isPending ? "Subscribing…" : "Subscribe"}

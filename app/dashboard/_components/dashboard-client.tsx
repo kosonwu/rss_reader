@@ -402,8 +402,11 @@ export default function DashboardClient({
     })
   }, [feedItems])
 
-  // Keep knownCount in sync with totalCount from server
-  useEffect(() => { knownCount.current = totalCount }, [totalCount])
+  // Only ratchet up — /api/feed-items-count is unfiltered, so syncing down to
+  // a filtered totalCount would make every 60s poll look like "new articles".
+  useEffect(() => {
+    if (totalCount > knownCount.current) knownCount.current = totalCount
+  }, [totalCount])
 
   // Local date state for DatePicker preview (URL updated only on popover close)
   const [localDateFrom, setLocalDateFrom] = useState<Date>(() => parseISO(datFromStr))

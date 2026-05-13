@@ -27,7 +27,7 @@ from config import settings
 from text_utils import clean_token, preprocess
 
 logger = logging.getLogger(__name__)
-_BATCH_SIZE = 10
+_BATCH_SIZE = 20
 _TOP_N = 7
 
 # Strip HTTP(S) URLs before passing text to KeyBERT — audio-file URLs (e.g. podcast

@@ -162,7 +162,7 @@ async def _build_item(entry: feedparser.FeedParserDict) -> dict:
 
         # Step 2: trafilatura extraction
         if content is None and page_html:
-            extracted = trafilatura.extract(page_html, include_comments=False, include_tables=False)
+            extracted = trafilatura.extract(page_html, include_comments=False, include_tables=False, favor_precision=True)
             if extracted and len(extracted.strip()) >= 100:
                 content = extracted.strip()
                 content_source = "extracted"

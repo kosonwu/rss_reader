@@ -213,7 +213,7 @@ export default function HomePage() {
             </span>
           </div>
           <span className="text-[10px] font-mono text-muted-foreground tracking-wide">
-            Next.js · Python · Neon
+            Next.js · Python · PostgreSQL
           </span>
         </div>
       </div>
